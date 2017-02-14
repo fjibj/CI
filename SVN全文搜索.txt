@@ -1,0 +1,7 @@
+当前产品线文档库保存在SVN上，虽然管理较为方便，但查询（尤其是全文搜索）非常不便，遂安装SVNSearcher以解决。
+SVN Searcher参考：
+http://svn-search.sourceforge.net/
+
+因SVN Searcher是2007的开源产品，故不能支持office的最新格式（如.docx,.xlsx等），目前能够支持.doc,.xls,.ppt,.pdf等文档，甚至支持对.java，.js代码的全文搜索
+
+等有空时需要修改代码以支持office的最新格式（如.docx,.xlsx等）。
