@@ -1,7 +1,12 @@
-��ǰ��Ʒ���ĵ��Ᵽ����SVN�ϣ���Ȼ������Ϊ���㣬����ѯ��������ȫ���������ǳ����㣬�찲װSVNSearcher�Խ����
-SVN Searcher�ο���
+当前产品线文档库保存在SVN上，虽然管理较为方便，但查询（尤其是全文搜索）非常不便，遂安装SVNSearcher以解决。
+SVN Searcher参考：
 http://svn-search.sourceforge.net/
 
-��SVN Searcher��2007�Ŀ�Դ��Ʒ���ʲ���֧��office�����¸�ʽ����.docx,.xlsx�ȣ���Ŀǰ�ܹ�֧��.doc,.xls,.ppt,.pdf���ĵ�������֧�ֶ�.java��.js�����ȫ������
+因SVN Searcher是2007的开源产品，故不能支持office的最新格式（如.docx,.xlsx等），目前能够支持.doc,.xls,.ppt,.pdf等文档，甚至支持对.java，.js代码的全文搜索
 
-���п�ʱ��Ҫ�޸Ĵ�����֧��office�����¸�ʽ����.docx,.xlsx�ȣ���
+等有空时需要修改代码以支持office的最新格式（如.docx,.xlsx等）。
+
+--经检测发现，在选择All Types（全部类型）时可以搜索到类型为.docx和.xlsx的文档内容，但是是以XML格式展示的。
+
+
+--另：SVN Searcher中的Authorization因年代久远，不兼容SVN相关头文件，故无法编译通过。SVN Searcher中搜索出的文件在下载时仍然需要输入SVN登录用户名密码信息，故也具备一定的安全性，因此不在对SVN全文搜索本身进行权限控制。
