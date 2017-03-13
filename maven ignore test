@@ -1,0 +1,3 @@
+mvn命令中：
+-Dmaven.test.failure.ignore=true 如果用这个就会跑test但忽略错误
+-DskipTests=true是不跑test
