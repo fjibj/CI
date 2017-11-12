@@ -1,0 +1,167 @@
+spring cloud微服务容器环境制作全过程：
+一、Docker及Docker-Compose环境
+1.安装Docker环境
+前提条件：
+Centos版本必须为7以上。如果之前已安装旧版本，可以卸载安装新的
+sudo yum remove docker \
+                  docker-common \
+                  docker-selinux \
+                  docker-engine
+下载安装包：
+docker-ce-17.03.2.ce-1.el7.centos.x86_64.rpm （https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-ce-17.03.2.ce-1.el7.centos.x86_64.rpm）
+docker-ce-selinux-17.03.2.ce-1.el7.centos.noarch.rpm（https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-ce-selinux-17.03.2.ce-1.el7.centos.noarch.rpm）
+libtool-ltdl-2.4.2-22.el7_3.x86_64.rpm(非必须)
+安装过程：
+（1）将下载的文件拷贝到你所需安装的系统文件夹内
+（2）安装libtool
+ sudo yum install libtool-ltdl-2.4.2-22.el7_3.x86_64.rpm
+（3）.安装docker-ce-selinux
+ sudo yum install docker-ce-selinux-17.03.2.ce-1.el7.centos.noarch.rpm
+（4）安装docker-ce
+ sudo yum install docker-ce-17.03.2.ce-1.el7.centos.x86_64.rpm
+（5）启动
+sudo systemctl start docker
+（6）设置开机启动
+chkconfig docker on
+2. 安装docker-compose:
+（1）下载https://github.com/docker/compose/releases/download/1.17.1/docker-compose-Linux-x86_64
+（2）$ sudo mv <download_filename> docker-compose
+（3）$ sudo mv docker-compose /usr/local/bin/docker-compose
+（4）修改文件用户名用户组 （或修改访问权限）
+        $ cd /usr/local/bin/
+        $ chmod 755 docker-compose
+（5）验证：$ docker-compose --version
+二、Harbor镜像库安装及镜像同步
+1.下载：从https://github.com/vmware/harbor/releases下载Latest release，建议下载offline installer.
+2.解压：$ tar xvf harbor-offline-installer-<version>.tgz
+3.编辑harbor.cfg文件：
+hostname = 10.45.59.249  （修改成本机IP地址）
+4.安装：$ sudo ./install.sh
+5.界面：http://10.45.59.250/ u/p:admin/Harbor12345, 在“系统管理“-》”用户管理“-》点击“+用户”创建用户 dev/Dev12345
+5.登录：$ docker login 10.45.59.250 -u dev -p Dev12345
+6.在10.45.59.250上重复上述1~5步
+7.同步设置：
+（1）在http://10.45.59.250/界面上“系统管理”-》“复制管理”-》点击“+目标”，添加同步的目标Harbor:
+目标名：harbor01
+目标URL：http://10.45.59.249
+用户名：dev
+密码：Dev12345
+（2）“项目”-》“library“-》“复制”-》“+复制规则”：
+名称：rep-to-harbor01
+描述：
+启用：勾上
+目标名及以下，选择一个，一般就是上面设置的harbor01。
+点击“测试连接”，显示“测试连接成功。”
+点击“确定”。
+8.在http://10.45.59.249界面上重复8中的步骤。
+9.验证镜像上传：
+(1)SSH登录任何一台想上传或下载docker镜像的linux机器，设置insecure-registries：
+sudo tee /etc/docker/daemon.json <<-'EOF'
+{
+  "insecure-registries": ["10.45.59.249", "10.45.59.250", "daocloud.io"],
+  "hosts": ["tcp://0.0.0.0:2375", "unix:///var/run/docker.sock"],
+  "live-restore": true
+}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+（2）$ docker login 10.45.59.249 -u dev -p Dev12345
+（3）$ docker tag vmware/harbor-log 10.45.59.249/library/vmware/harbor-log
+注：vmware/harbor-log可以换成任意一个本地镜像名称，可以用docker images查看本机有哪些docker镜像。
+    10.45.59.249/library/注意这里的IP要与docker login中的IP一致，library是harbor中的默认项目，也可以在harbor中创建项目。
+（4）$ docker push 10.45.59.249/library/vmware/harbor-log
+（5）登录http://10.45.59.249界面，“项目”-》“library”-》“镜像仓库”，就可以看到上传的library/vmware/harbor-log镜像了。
+（6）根据设置的同步规则，登录http://10.45.59.250界面，“项目”-》“library”-》“镜像仓库”，也可看到library/vmware/harbor-log镜像。
+
+三、Spring Cloud环境  
+单机docker-compose环境：
+1. 安装docker及docker-compse环境，参看（一、Docker及Docker-Compose环境）
+2. 从Harbor获取zres/jce-java基础镜像，作为后续各个镜像的基础
+$ docker login 10.45.59.249 -u dev -p Dev12345
+$ docker pull 10.45.59.249/library/zres/jce-java
+$ docker tag 10.45.59.249/library/zres/jce-java zres/jce-java
+2. 以eureka_server为例
+（1）首先编译生成jar包（采用maven进行编译，编译过程略）：eureka_server/target/eureka_server-1.0-SNAPSHOT.jar
+（2）编写Dockerfile文件
+        $ vim eureka_server/Dockerfile
+        FROM zres/jce-java    #基础镜像
+        MAINTAINER Seder<fang.jin@ztesoft.com> #联系人
+        VOLUME /tmp
+        COPY ./target/eureka_server-1.0-SNAPSHOT.jar /app.jar #将本地编译的jar包复制到镜像中
+        ENTRYPOINT [ "java", "-jar", "-Djava.security.egd=file:/dev/./urandom", "/app.jar" ]  #启动容器时执行的命令
+        CMD [ "--spring.profiles.active=server1" ] #启动容器时执行的命令参数
+        EXPOSE 8763 18763 8762 18762 8761 18761 #容器暴露的端口
+（4）编写docker-compose.yml
+$ vim docker-compose.yml
+version: "3"
+
+services:
+    jce_java:
+        build: ./docker-jce-jre
+        image: zres/jce-java
+        read_only: true
+        command: echo "jce java"
+        environment:
+            - TZ=Asia/Shanghai
+    eurekaserver1:  #服务名
+        build: ./eureka_server #生成镜像时使用该目录下的Dockerfile
+        image: zres/eureka_server #生成的镜像名称
+        ports:
+            - "8761:8761"     #容器暴露的端口
+        depends_on:
+            - 'jce_java'  #依赖的服务
+        environment:
+            - TZ=Asia/Shanghai #时区
+        command: "--spring.profiles.active=server1"   #容器启动时执行命令的参数，server1表示是使用application-server1.yml
+    eurekaserver2:
+        build: ./eureka_server
+        image: zres/eureka_server
+        ports:
+            - "8762:8762"
+        depends_on:
+            - 'jce_java'
+        environment:
+            - TZ=Asia/Shanghai
+        command: "--spring.profiles.active=server2"
+    eurekaserver3:
+        build: ./eureka_server
+        image: zres/eureka_server
+        ports:
+            - "8763:8763"
+        depends_on:
+            - 'jce_java'
+        environment:
+            - TZ=Asia/Shanghai
+        command: "--spring.profiles.active=server3"
+（5）构建镜像：
+$ docker-compose build eurekaserver1 eurekaserver2 eurekaserver3
+（6）启动容器：
+$ docker-compose up -d eurekaserver1 eurekaserver2 eurekaserver3
+其他springcloud服务均采用类似方式生成镜像和启动容器，Dockerfile文件在各个服务目录下，而服务内容则统一补充到docker-compose.yml中，如
+config_server1:
+        build: ./ConfigCenter
+        image: zres/config_server
+        ports:
+            - "5081:5081"
+        depends_on:
+            - 'jce_java'
+            - 'eurekaserver1'
+            - 'eurekaserver2'
+            - 'eurekaserver3'
+        healthcheck:
+           test: ["CMD", "curl", "-f", "http://eurekaserver1:8761/server"]
+           interval: 30s
+           timeout: 30s
+           retries: 3
+        environment:
+            - TZ=Asia/Shanghai
+        command: "--spring.profiles.active=server1,subversion"
+注：如果对某个代码或配置文件作了修改，需要按编译、镜像、停服务（容器）、重新生成服务（容器）的过程处理。
+停服务（容器）：docker-compose stop config_server1(服务名）
+停所有服务：docker-compse down
+
+
+
+
+
+
