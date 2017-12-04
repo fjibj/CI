@@ -1,0 +1,231 @@
+mesos与kubernetes集成安装过程
+
+一、 基本环境
+10.45.53.89  ubuntu系统，用户名/密码：root/root,was/was
+10.45.53.8   redhat7.0系统，用户名/密码：root/ztesoft123,docker/docker
+10.45.53.188 redHat7.1系统，用户名/密码：root/ztesoft123, ztesoft/ztesoft
+
+在每台机器上
+vim /etc/hosts
+添加：
+10.45.53.89  docker01
+10.45.53.8   docker02
+10.45.53.188 docker03
+
+二、RedHat7/7.1上的mesos+marathon安装
+$ sudo yum install -y tar wget git
+1. 手工安装maven
+$ wget http://mirrors.cnnic.cn/apache/maven/maven-3/3.3.3/binaries/apache-maven-3.3.3-bin.tar.gz
+$ tar zxvf apache-maven-3.3.3-bin.tar.gz
+$ mv apache-maven-3.3.3 /usr/local/apache-maven
+2. 安装第三方包
+$ yum install -y python-devel java-1.8.0-openjdk-devel zlib-devel libcurl-devel subversion-devel patch
+3. 设置环境变量
+$ export MAVEN_HOME=/usr/local/apache-maven
+$ export JAVA_HOME=/usr/lib/jvm/java-1.8.0
+$ export PATH=$JAVA_HOME/bin:$PATH
+4. 安装mesos
+$ git clone https://git-wip-us.apache.org/repos/asf/mesos.git
+$ cd mesos
+$ ./bootstrap
+$ ./configure
+$ make && make install
+5. 修改zookeeper配置
+$ cd 3rdparty
+$ tar –xzf zookeeper-*.tar.gz
+$ cd zookeeper-*
+$ mkdir {data,log}
+$ cp conf/zoo_sample.cfg conf/zoo.cfg
+     $ vim conf/zoo.cfg   
+在zoo.cfg中添加
+注释原dataDir行
+dataDir=/mesos/mesos/3rdparty/zookeeper-3.4.5/data
+server.1=docker01:2888:3888 
+server.2=docker02:2888:3888 
+server.3=docker03:2888:3888
+$ vim data/myid
+1 (此中的数字为zoo.cfg的server.X中的X，不同的主机填写相应的数字）
+$ export MESOS_NATIVE_JAVA_LIBRARY=/usr/local/lib/libmesos-0.27.2.so
+$ export MESOS_NATIVE_LIBRARY=/usr/local/lib/libmesos-0.27.2.so
+以后台方式启动mesos-master和mesos-slave
+$ nohup mesos-master --zk=zk://docker01:2181,docker02:2181,docker03:2181/mesos --log_dir=/mesos/mesos/3rdparty/zookeeper-3.4.5/log  --work_dir=/mesos/mesos/3rdparty/zookeeper-3.4.5/data --quorum=2 --cluster=Cluster01 > /mesos/mesos/3rdparty/zookeeper-3.4.5/log/mesos.log &
+    $ nohup mesos-slave --master=zk://docker01:2181,docker02:2181,docker03:2181/mesos > /mesos/mesos/3rdparty/zookeeper-3.4.5/log/mesos-slave.log &
+6. 安装marathon
+(1)安装sbt(scala编译工具）
+$ curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
+$ sudo yum install sbt
+(2)编译marathon
+$ git clone https://github.com/mesosphere/marathon.git
+$ cd marathon
+$ sbt assembly
+或直接下载
+(1)$ curl -O http://downloads.mesosphere.com/marathon/v0.15.2/marathon-0.15.2.tgz
+(2)$ ar xzf marathon-0.15.2.tgz
+(3)启动marathon
+$ mv marathon-0.15.2 marathon
+$ cd marathon
+$ vim /etc/profile
+添加：
+export MAVEN_HOME=/usr/local/apache-maven
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0
+$ source /etc/profile
+启动marathon
+$ ./bin/start --master zk://docker01:2181,docker02:2181,docker03:2181/mesos --zk zk://docker01:2181,docker02:2181,docker03:2181/marathon
+
+三、ubuntu14.04上的mesos+marathon安装
+$ sudo add-apt-repository ppa:webupd8team/java -y
+$ sudo apt-get update
+$ sudo apt-get install oracle-java8-installer   （download jdk-8u66-linux-x64.tar.gz需要些时间）
+$ sudo apt-get install oracle-java8-set-default
+$ DISTRO=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
+$ CODENAME=$(lsb_release -cs)
+$ echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" | sudo tee /etc/apt/sources.list.d/mesosphere.list
+$ sudo apt-get -y update
+W: GPG 错误：http://repos.mesosphere.io trusty InRelease: 由于没有公钥，无法验证下列签名： NO_PUBKEY DF7D54CBE56151BF
+$ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys DF7D54CBE56151BF
+$ sudo apt-get -y install mesos marathon
+$ echo manual | sudo tee /etc/init/mesos-slave.override
+$ echo 10.45.53.89 | sudo tee /etc/mesos-master/hostname
+$ echo 10.45.53.89 | sudo tee /etc/mesos-master/ip
+$ echo Cluster01 | sudo tee /etc/mesos-master/cluster
+$ echo 2 | sudo tee /etc/mesos-master/quorum
+$ echo zk://docker01:2181,docker02:2181,docker03:2181/mesos | sudo tee /etc/mesos/zk
+$ echo 1 | sudo tee /etc/zookeeper/conf/myid
+$ echo 10.45.53.89 | sudo tee /etc/mesos-slave/hostname
+$ echo 10.45.53.89  | sudo tee /etc/mesos-slave/ip
+$ echo "cgroups/cpu,cgroups/mem" | sudo tee /etc/mesos-slave/isolation
+$ sudo reboot
+修改/etc/zookeeper/conf/zoo.cfg
+server.1=docker01:2888:3888 
+server.2=docker02:2888:3888 
+server.3=docker03:2888:3888
+设置marathon配置文件
+$ mkdir  -p  /etc/marathon/conf
+$ echo docker01 | sudo tee /etc/marathon/conf/hostname
+$ echo zk://docker01:2181,docker02:2181,docker03:2181/marathon | sudo tee /etc/marathon/conf/zk
+$ service zookeeper start/stop/restart
+$ service mesos-master start/stop/restart
+$ service mesos-slave start/stop/restart
+   $ service marathon start/stop/restart
+
+四、ubuntu14.04上的kubernetes安装
+1. 安装go语言
+
+   ubuntu:  
+        
+   $ wget http://golangtc.com/static/go/1.6/go1.6.linux-amd64.tar.gz
+
+   $ sudo tar -xzf go1.6.linux-amd64.tar.gz -C /usr/local/
+
+   $ sudo vim /etc/profile
+   添加：
+   GOROOT=/usr/local/go
+   PATH=$GOROOT/bin:$PATH
+
+   $ source /etc/profile
+
+2. 编译k8s
+$ git clone https://github.com/kubernetes/kubernetes
+$ cd kubernetes
+$ export KUBERNETES_CONTRIB=mesos
+$ make
+
+
+$ export KUBERNETES_MASTER_IP=$(hostname -i)
+$ export KUBERNETES_MASTER=http://${KUBERNETES_MASTER_IP}:8888
+
+3. 部署etcd
+$ sudo docker run -d --hostname $(uname -n) --name etcd \
+  -p 4001:4001 -p 7001:7001 quay.io/coreos/etcd:v2.2.1 \
+  --listen-client-urls http://0.0.0.0:4001 \
+  --advertise-client-urls http://${KUBERNETES_MASTER_IP}:4001
+
+4. 启动k8s-mesos服务
+$ export MESOS_MASTER=zk://docker01:2181,docker02:2181,docker03:2181/mesos
+建议将所有环境变量都加到/etc/profile中
+$ cat <<EOF >mesos-cloud.conf
+[mesos-cloud]
+        mesos-master        = ${MESOS_MASTER}
+EOF
+
+$ export PATH="$(pwd)/_output/local/go/bin:$PATH"
+
+$ km apiserver \
+  --address=${KUBERNETES_MASTER_IP} \
+  --etcd-servers=http://${KUBERNETES_MASTER_IP}:4001 \
+  --service-cluster-ip-range=10.10.10.0/24 \
+  --port=8888 \
+  --cloud-provider=mesos \
+  --cloud-config=mesos-cloud.conf \
+  --secure-port=0 \
+  --v=1 >apiserver.log 2>&1 &
+
+$ km controller-manager \
+  --master=${KUBERNETES_MASTER_IP}:8888 \
+  --cloud-provider=mesos \
+  --cloud-config=./mesos-cloud.conf  \
+  --v=1 >controller.log 2>&1 &
+
+$ km scheduler \
+  --address=${KUBERNETES_MASTER_IP} \
+  --mesos-master=${MESOS_MASTER} \
+  --etcd-servers=http://${KUBERNETES_MASTER_IP}:4001 \
+  --mesos-user=root \
+  --api-servers=${KUBERNETES_MASTER_IP}:8888 \
+  --cluster-dns=10.10.10.10 \
+  --cluster-domain=cluster.local \
+  --v=2 >scheduler.log 2>&1 &
+
+$ disown -a
+
+
+
+启动kube-dns
+$ cp skydns-rc.yaml.in skydns-rc.yaml
+$ vim skydns-rc.yaml
+将
+{{ pillar['dns_replicas'] }}替换成1
+{{ pillar['dns_domain'] }}替换成cluster.local
+在
+# command = "/kube2sky"
+- --domain={{ pillar['cluster.local'] }}
+下面添加一行
+- --kube_master_url=${KUBERNETES_MASTER}
+
+
+$ cp skydns-svc.yaml.in skydns-svc.yaml
+$ vim skydns-svc.yaml
+将
+'dns_server'替换成10.10.10.10
+
+
+$ kubectl create -f ./skydns-rc.yaml
+$ kubectl create -f ./skydns-svc.yaml
+$ kubectl get pods --namespace=kube-system
+
+五、环境使用 
+$ vim nginx-deployment.yaml
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+
+$ kubectl create -f nginx-deployment.yaml 
+
+$ kubectl get pods
+
+Mesos查看界面：http://10.45.53.89:5050
+Marathon查看界面：http://10.45.53.89:8080/ui/
