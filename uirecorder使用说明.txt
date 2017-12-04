@@ -1,0 +1,41 @@
+uirecocrder安装：
+1. 安装nodejs
+2. 安装chrome
+3. 安装uirecorder:
+（1）打开nodejs命令行
+（2）创建并进入uirecord目录:
+	mkdir uirecord
+	cd uirecord
+（3）在目录中运行 npm install uirecorder mocha -g 
+
+uirecorder使用：
+
+1. 打开一个nodejs命令行窗口，进入uirecord目录。
+
+2. 启动WebDriver Server。
+运行：npm run server
+注意在使用过程中这个窗口不要关。
+
+3. 再打开一个nodejs命令行窗口，进入uirecord目录。
+
+4. 创建一个test目录，比如
+mkdir mytest
+注意不要进入目录
+
+5. 开始记录：
+uirecorder mytest/test1.spec.js
+一般使用默认参数即可，连续回车几次
+输入测试环境URL，点击“开始录制”按钮
+验证环境：
+http://10.45.53.7:18080/Ficus_resweb
+Admin1/1
+
+操作结束时，点击“结束录制”按钮
+
+6. nodejs命令行容器会显示录制过程，录制下来的文件保存在mytest/test1.spec.js中
+可以查看test1.spec.js内容。
+
+7. 回放：
+run.bat mytest\test1.spec.js
+
+更详细的使用说明可以参看：https://github.com/alibaba/uirecorder
