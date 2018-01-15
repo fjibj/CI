@@ -1,0 +1,20 @@
+今天遇到harbor不能启动的问题，经查是因为docker rm容器过程中报
+ERROR: for harbor-log  driver "overlay" failed to remove root filesystem for 7d1033d73d3dd46e1ade994542bb0b2aa37196c9e665954a50084fc9698d3b1c: remove /var/lib/docker/overlay/8234fa399051352e27e201e6e3f041c93dc1345c403fc47364ba8d68b6f47b97/merged: device or resource busy
+Removing network harbor_harbor
+
+经过检查：
+1. 检查是否有其它进程占用了docker资源
+grep docker /proc/*/mountinfo|/var/lib/docker/overlay/8234fa399051352e27e201e6e3f041c93dc1345c403fc47364ba8d68b6f47b97
+输出：
+。。。。。
+/proc/3279/mountinfo:256 263 0:40 /var/lib/docker/overlay/8234fa399051352e27e201e6e3f041c93dc1345c403fc47364ba8d68b6f47b97
+。。。。。
+2.再根据进程号查看
+ps -ef|grep 3279 
+输出：
+colord
+3.停掉对应的服务：
+service colord stop
+4.重新启动harbor
+cd ~/harbor
+./install.sh
