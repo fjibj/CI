@@ -1,0 +1,32 @@
+利用Docker环境配置jupyter notebook服务器
+
+   （自从升级到python3.6.4之后，原来的jupyter就不能用了，各种配置之后果断放弃，使用docker大法）
+
+   
+   docker run -d -p 8888:8888 jupyter/tensorflow-notebook start-notebook.sh --NotebookApp.password='sha1:fe4aac50f0f6:b68a456aac9ec4d0fe0db6a67c0cf245c3942857'   
+
+
+   或：
+   
+   mkdir jupyter 
+   cd jupyter
+   mkdir work
+   chown 1000 /root/jupyter/work
+   docker run -d --user root -e NB_UID=1000 -e GRANT_SUDO=yes -p 8888:8888 \
+    -v /root/jupyter/work:/home/jovyan/work \
+    jupyter/tensorflow-notebook start-notebook.sh \
+    --NotebookApp.password='sha1:a2ba8cef8962:971baddbde401af7fd85bad56da3c8981c8f782c'
+
+   docker run -d --user root -e NB_UID=1000 -e GRANT_SUDO=yes -p 18888:8888 \
+    -v /root/jupyter/work:/home/jovyan/work \
+    jupyter/datascience-notebook start-notebook.sh \
+    --NotebookApp.password='sha1:a2ba8cef8962:971baddbde401af7fd85bad56da3c8981c8f782c'
+   
+   docker run -d --user root -e NB_UID=1000 -e GRANT_SUDO=yes -p 28888:8888 \
+    -v /root/jupyter/work:/home/jovyan/work \
+    jupyter/all-spark-notebook start-notebook.sh \
+    --NotebookApp.password='sha1:a2ba8cef8962:971baddbde401af7fd85bad56da3c8981c8f782c'
+    
+
+   http://xx.xx.xx.xx:8888/   (ztesoft123)
+   注：设置登录密码，但没有设置SSL
