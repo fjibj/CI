@@ -1,0 +1,129 @@
+k8s是最火的容器集群环境，如何在k8s上部署、变更应用是一个难题，最近有一款工具helm传说的很多，于是我验证了一下。
+
+简单说一下环境，我这边是一个8台虚拟机构成的k8s集群环境，另有两台虚拟机构成的harbor镜像库(k8s集群和harbor库都不连外网）
+
+找一台虚拟机（ubuntu14.04, 可连k8s集群、Harbor，可连外网，已安装docker环境）
+1. 在上面安装kubectl，步骤如下：
+
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+
+mkdir ~/.kube
+
+cd ~/.kube
+
+scp root@10.45.59.203:/root/.kube/config ./config   #将k8s集群管理节点上的kube config文件复制过来
+
+kubectl cluster-info
+
+2. 安装helm 
+
+mkdir helm
+
+cd helm 
+
+wget https://storage.googleapis.com/kubernetes-helm/helm-v2.8.2-linux-amd64.tar.gz
+
+tar -zxvf helm-v2.8.2-linux-amd64.tar.gz
+
+mv linux-amd64/helm /usr/local/bin/helm
+
+由于k8s集群环境不能上外网，只能从Harbor库摘取镜像，因此需要将tiller镜像先上传到harbor库：
+
+docker pull registry.cn-hangzhou.aliyuncs.com/mapsic/tiller:v2.8.2
+
+docker tag registry.cn-hangzhou.aliyuncs.com/mapsic/tiller:v2.8.2 10.45.59.249/gcr.io/kubernetes-helm/tiller:v2.8.2
+
+docker push 10.45.59.249/gcr.io/kubernetes-helm/tiller:v2.8.2 #将镜像上传到Harbor
+
+kubectl create serviceaccount --namespace kube-system tiller
+
+kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+
+kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'    
+
+helm init --service-account tiller --upgrade -i 10.45.59.249/gcr.io/kubernetes-helm/tiller:v2.8.2 #从Harbor库取镜像安装
+
+3. 创建本地charts repo：
+
+mkdir mycharts
+
+nohup helm serve --address 0.0.0.0:8879 --repo-path ./mycharts & #启动一个web server可查看本地charts库
+
+helm repo add mycharts http://10.45.59.182:8879
+
+helm repo list  #查看repo清单
+
+4. helm安装chart举例
+
+git clone https://github.com/kubernetes/charts #先下载官方Charts
+
+以安装官方redis chart为例：
+
+cd mycharts
+
+cp -r charts/stable/redis ./  #将官方的redis chart目录复制到mycharts目录下
+
+（1）检查redis/values.yaml中用到的image,先将其下载后上到harbor库
+
+docker pull bitnami/redis:4.0.9-r0
+
+docker pull oliver006/redis_exporter:v0.11
+
+docker tag bitnami/redis:4.0.9-r0 10.45.59.250/k8s/helm/bitnami/redis:4.0.9-r0
+
+docker tag oliver006/redis_exporter:v0.11 10.45.59.250/k8s/helm/oliver006/redis_exporter:v0.11
+
+docker push 10.45.59.250/k8s/helm/bitnami/redis:4.0.9-r0
+
+docker push 10.45.59.250/k8s/helm/oliver006/redis_exporter:v0.11
+
+（2）修改redis/values.yaml
+
+vim redis/values.yaml
+
+。。。。
+image: 10.45.59.250/k8s/helm/bitnami/redis:4.0.9-r0  #将镜像改成harbor库中对应的镜像
+。。。。
+  image: 10.45.59.250/k8s/helm/oliver006/redis_exporter
+。。。。
+
+（3）本地打包并更新helm index
+
+helm package redis/
+
+cd .. #回到helm目录
+
+helm repo index mycharts --url http://10.45.59.182:8879/
+
+helm repo update
+
+helm search redis
+
+（5）安装redis
+
+helm install --name redis-test --set "persistence.enabled=false" mycharts/redis
+
+执行之后，可在k8s管理台看到redis-test
+
+REDIS_PASSWORD=$(kubectl get secret --namespace default redis-test -o jsonpath="{.data.redis-password}" | base64 --decode)
+
+kubectl run --namespace default redis-test-client --rm --tty -i \
+    --env REDIS_PASSWORD=$REDIS_PASSWORD \
+   --image 10.45.59.250/k8s/helm/bitnami/redis:4.0.9-r0 -- bash    #启动一个pod作为redis client,并打开bash
+   
+redis-cli -h redis-test -a $REDIS_PASSWORD #进入redis命令行环境
+
+退出client pod之后可以用kubectl attach redis-test-client-6c96c4644b-w4f9w -c redis-test-client -i -t 再次连接（注redis-test-client-6c96c4644b-w4f9w名称可能不同）
+
+（6）删除
+
+通过helm install的应用删除很方便，例如：
+
+helm install redis-test
+
+扩展：
+
+上述过程中的下载镜像再上传到harbor的过程比较繁琐，后续要考虑写一个通用脚本来简化。
+
+
+
