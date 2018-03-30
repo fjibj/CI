@@ -123,7 +123,13 @@ helm install redis-test
 
 扩展：
 
-上述过程中的下载镜像再上传到harbor的过程比较繁琐，后续要考虑写一个通用脚本来简化。
+docker取镜像并上传到本地Harbor仓库
+./dockerToHarbor.sh mongo 10.45.59.250/base
+
+vim dockerToHarbor.sh
+docker pull $1
+docker tag $1 $2/$1
+docker push $2/$1
 
 
 
