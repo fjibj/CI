@@ -101,7 +101,9 @@ helm search redis
 
 （5）安装redis
 
-helm install --name redis-test --set "persistence.enabled=false" mycharts/redis
+helm install --name redis-test --namespace fj-test --set "persistence.enabled=false" mycharts/redis
+
+注：创建命名空间  kubectl create namespace fj-test
 
 执行之后，可在k8s管理台看到redis-test
 
@@ -119,7 +121,7 @@ redis-cli -h redis-test -a $REDIS_PASSWORD #进入redis命令行环境
 
 通过helm install的应用删除很方便，例如：
 
-helm install redis-test
+helm delete redis-test
 
 扩展：
 
