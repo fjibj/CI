@@ -107,13 +107,21 @@ helm install --name redis-test --namespace fj-test --set "persistence.enabled=fa
 
 执行之后，可在k8s管理台看到redis-test
 
-REDIS_PASSWORD=$(kubectl get secret --namespace default redis-test -o jsonpath="{.data.redis-password}" | base64 --decode)
+To get your password run:
 
-kubectl run --namespace default redis-test-client --rm --tty -i \
+    REDIS_PASSWORD=$(kubectl get secret --namespace fj-test redis-test -o jsonpath="{.data.redis-password}" | base64 --decode)
+
+To connect to your Redis server:
+
+1. Run a Redis pod that you can use as a client:
+
+   kubectl run --namespace fj-test redis-test-client --rm --tty -i \
     --env REDIS_PASSWORD=$REDIS_PASSWORD \
-   --image 10.45.59.250/k8s/helm/bitnami/redis:4.0.9-r0 -- bash    #启动一个pod作为redis client,并打开bash
-   
-redis-cli -h redis-test -a $REDIS_PASSWORD #进入redis命令行环境
+   --image 10.45.59.250/k8s/helm/bitnami/redis:4.0.9-r0 -- bash
+
+2. Connect using the Redis CLI:
+
+  redis-cli -h redis-test -a $REDIS_PASSWORD
 
 退出client pod之后可以用kubectl attach redis-test-client-6c96c4644b-w4f9w -c redis-test-client -i -t 再次连接（注redis-test-client-6c96c4644b-w4f9w名称可能不同）
 
