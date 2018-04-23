@@ -17,7 +17,8 @@
                       
                       Scope -- Global
                       
-                      Authentication Token -- 从 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')获得，将token：后的内容粘贴进来
+                      Authentication Token -- 从 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')获得，
+                      将token：后的内容粘贴进来
                       
                       ID --任意字符串作为标识
                       
@@ -29,7 +30,8 @@
     
                       Description -- 名称，，，
                       
-                      Charts repository URL -- 必须是一个github地址，如https://github.com/fjibj/mygitcharts，该地址下包含一个或多个Chart子目录
+                      Charts repository URL -- 必须是一个github地址，如https://github.com/fjibj/mygitcharts，
+                                            该地址下包含一个或多个Chart子目录
                       
                       Credentials --可选
                       
@@ -51,7 +53,8 @@
                       
                       Charts repository -- 选择前面定义的Chart库
                       
-                      Chart to deploy --选择要部署的Chart（![此外只支持Charts for Helm Classic v1，不支持kubernetes/Charts],参考https://github.com/helm/charts-classic，
+                      Chart to deploy --选择要部署的Chart（此外只支持Charts for Helm Classic v1，不支持kubernetes/Charts,
+                      参考https://github.com/helm/charts-classic，
                       记得将Chart manifests下文件中的image改成本地Harbor库中的镜像）
                       
                       
