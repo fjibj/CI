@@ -1,0 +1,69 @@
+前提：
+1、 已安装好kubernetes集群环境并做好Token认证
+
+部署过程：
+
+1、 在jenkins中下载并安装ElasticBox Jenkins Kubernetes CI/CD Plug-in插件
+
+2、 在jenkins系统设置中添加一个云，指向kubernetes环境
+
+    Description --名称
+    
+    Endpoint URL -- kubernetes集群Endpoint URL，可从 kubectl clusert-info获得
+    
+    Credentials -- Add：
+    
+                      Kind -- Authentication Token
+                      
+                      Scope -- Global
+                      
+                      Authentication Token -- 从 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')获得，将token：后的内容粘贴进来
+                      
+                      ID --任意字符串作为标识
+                      
+    Predefined namespace -- 选择一个默认的命名空间
+    
+    Max. No. of containers -- 10
+    
+    Chart Repository Configurations：
+    
+                      Description -- 名称，，，
+                      
+                      Charts repository URL -- 必须是一个github地址，如https://github.com/fjibj/mygitcharts，该地址下包含一个或多个Chart子目录
+                      
+                      Credentials --可选
+                      
+   Pod Slave Configurations：
+   
+                      Description -- 名称
+                   
+                      Labels -- 可空
+                      
+                      Pod YAML definition -- 将例子中拷入，将env下的value改成jenkins master URL地址
+                      
+3、 创建job并执行
+
+    创建一个jenkins自由风格job，在其构建步骤中添加 Kubernetes - Deploy Chart:
+    
+                      Cloud -- 选择前面定义的云
+                      
+                      Namespace -- 选择应用要部署到的命名空间
+                      
+                      Charts repository -- 选择前面定义的Chart库
+                      
+                      Chart to deploy --选择要部署的Chart（![此外只支持Charts for Helm Classic v1，不支持kubernetes/Charts],参考https://github.com/helm/charts-classic，
+                      记得将Chart manifests下文件中的image改成本地Harbor库中的镜像）
+                      
+                      
+     保存，并”立即构建“
+                      
+                        
+                      
+                      
+                      
+                      
+                      
+                      
+    
+                      
+                      
