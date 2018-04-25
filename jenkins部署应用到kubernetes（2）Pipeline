@@ -76,7 +76,7 @@ DomainName: newegg-nginx
 
 Definition：选择Pipeline script from SCM
 
-SCM：选择Git
+SCM：选择Git（根据项目需要也可以用SVN，Jenkinsfile、chart等文件应与代码放在一起）
 
 Repository URL：输入包含第4步中文件的github地址（如https://github.com/fjibj/Jenkins-Pipeline-CI-CD-with-Helm-on-Kubernetes）
 
