@@ -1,0 +1,88 @@
+1、Jenkins中安装插件 : Pipeline Suit, Github 和 Pipeline Utility Steps
+
+2、准备好kubernetes集群（参考 https://github.com/fjibj/follow-me-install-kubernetes-cluster）
+
+3、安装好Helm、Tiller（参考 https://github.com/fjibj/CI/blob/master/%E5%B0%8F%E8%AF%95helm）
+
+4、编写Chart以及Dockerfile、config.json、Jenkinsfile （参考 https://github.com/fjibj/Jenkins-Pipeline-CI-CD-with-Helm-on-Kubernetes）
+
+├── charts
+│   └── newegg-nginx
+│       ├── Chart.yaml
+│       ├── README.md
+│       ├── templates
+│       │   ├── deployment.yaml
+│       │   ├── _helpers.tpl
+│       │   ├── ingress.yaml
+│       │   └── service.yaml
+│       └── values.yaml
+├── config.json
+├── Dockerfile
+├── index.html
+└── Jenkinsfile
+
+4.1 Dockerfile
+----
+FROM centos:centos7
+MAINTAINER Seder
+
+RUN yum -y update \ 
+        && yum clean all \
+        && yum install -y epel-release \
+        && yum install -y nginx iproute
+
+EXPOSE 80
+COPY index.html /usr/share/nginx/html/
+CMD ["nginx", "-g", "daemon off;"]
+----
+
+4.1 config.json
+----
+   {
+    "app": {
+      "name": "nginx-test",
+      "replicas": "3",
+      "cpu": "10m",
+      "memory": "128Mi"
+    },
+    "pipeline": {
+      "enabled": true,
+      "library": {
+        "branch": "master"
+      }
+    }
+  }
+----
+
+4.2 Jenkinsfile (参考 https://github.com/fjibj/Jenkins-Pipeline-CI-CD-with-Helm-on-Kubernetes/blob/master/Jenkinsfile）
+
+作用：根据Dockerfile生成镜像上传Harbor，再通过Helm部署Chart
+
+4.3 Chart的values.yaml
+----
+ServiceType: NodePort
+Image: '10.45.59.250/k8s/nginx-test'
+Imagetag: 'latest'
+Replicas: 3
+ImagePullPolicy: "Always"
+Cpu: "10m"
+Memory: "128Mi"
+ContainerPort: 80
+ServicePort: 80
+DomainName: newegg-nginx
+----
+
+5、在Jenkins中创建一个pipeline的Job
+
+Definition：选择Pipeline script from SCM
+
+SCM：选择Git
+
+Repository URL：输入包含第4步中文件的github地址（如https://github.com/fjibj/Jenkins-Pipeline-CI-CD-with-Helm-on-Kubernetes）
+
+其他不变
+
+构建吧
+
+
+
