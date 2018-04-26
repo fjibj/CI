@@ -7,6 +7,10 @@ k8s是最火的容器集群环境，如何在k8s上部署、变更应用是一�
 
 curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
 
+chmod +x ./kubectl
+
+mv ./kubectl /usr/local/bin/kubectl
+
 mkdir ~/.kube
 
 cd ~/.kube
