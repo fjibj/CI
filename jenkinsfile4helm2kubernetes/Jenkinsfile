@@ -1,0 +1,177 @@
+#!groovy
+
+def kubectlTest() {
+    // Test that kubectl can correctly communication with the Kubernetes API
+    echo "running kubectl test"
+    sh "kubectl get nodes"
+
+}
+
+def helmLint(String chart_dir) {
+    // lint helm chart
+    sh "/usr/local/bin/helm lint ${chart_dir}"
+
+}
+
+def helmDeploy(Map args) {
+    //configure helm client and confirm tiller process is installed
+
+    if (args.dry_run) {
+        println "Running dry-run deployment"
+
+        sh "/usr/local/bin/helm upgrade --dry-run --debug --install ${args.name} ${args.chart_dir} --set replicaCount=${args.replicas},image.repository=${args.imagename},image.tag=${args.tag},image.pullPolicy=${args.pullPolicy},service.type=${args.type},service.port=${args.port},service.sessionAffinity=${args.sessionAffinity},service.containerPort=${args.containerPort},resources.requests.cpu=${args.cpu},resources.requests.memory=${args.memory},resources.limits.cpu=${args.cpu},resources.limits.memory=${args.memory} --namespace=${args.namespace}"
+    } else {
+        println "Running deployment"
+        sh "/usr/local/bin/helm upgrade --install ${args.name} ${args.chart_dir} --set replicaCount=${args.replicas},image.repository=${args.imagename},image.tag=${args.tag},image.pullPolicy=${args.pullPolicy},service.type=${args.type},service.port=${args.port},service.sessionAffinity=${args.sessionAffinity},service.containerPort=${args.containerPort},resources.requests.cpu=${args.cpu},resources.requests.memory=${args.memory},resources.limits.cpu=${args.cpu},resources.limits.memory=${args.memory} --namespace=${args.namespace}"
+
+        echo "Application ${args.name} successfully deployed. Use helm status ${args.name} to check"
+    }
+}
+
+def createTemporaryChart(String name) {
+    sh "/usr/local/bin/helm create ${name}"
+    echo  "Successfully created a temporary chart ${name}."
+
+}
+
+def getDate() {
+    def date = new Date()
+    def formattedDate = date.format('yyyyMMddHHmm')
+    return formattedDate
+}
+
+
+
+
+node {
+
+    echo "checkout svn -> create chart -> build to harbor -> helm test -> helm deploy"
+    
+    // Setup the Docker Registry (Docker Hub) + Credentials 
+    registry_url = "http://10.45.59.250" // Harbor Address
+    docker_creds_id = "harbor" //jenkins harbor credential
+    
+    // Setup the image tag v+datetime(example: v201804272256)
+    def datetime = getDate()
+    echo "now is ${datetime}"
+    build_tag = "v${datetime}" // tag to push for to the registry
+    
+    stage 'Checking out SVN Repo'
+    checkout scm
+    
+    // Parse config.json
+    def inputFile = readFile('config.json')
+    def config = readJSON file:'config.json'
+    println "pipeline config ==> ${config}"
+
+    def pwd = pwd()
+    def chart_name = config.app.name
+    def chart_dir = "${pwd}/${chart_name}"
+    
+    // Delete old chart directory
+    sh "rm -rf ${chart_name}"
+
+    stage 'Create temporary Chart'
+    createTemporaryChart(chart_name)
+    
+    
+    // Add sessionAffinity to service template
+    /*
+    def filename = "${chart_name}/templates/service.yaml"
+    def data = readYaml file: filename
+    data.spec.sessionAffinity = '{{ .Values.service.sessionAffinity }}'
+    sh "rm $filename"
+    writeYaml file: filename, data: data
+    */
+    sh "echo '  sessionAffinity: {{ .Values.service.sessionAffinity }}'>>${chart_name}/templates/service.yaml"
+
+    // Delete labels.chart for service template
+    sh "sed -i '/chart:/d' ${chart_name}/templates/service.yaml"
+
+    // Change containerPort to Variable from Config
+    sh "sed -i 's/containerPort: 80/containerPort: {{ .Values.service.containerPort }}/g' ${chart_name}/templates/deployment.yaml"
+    
+    // No Probe
+    /*
+    sh "sed -i '/livenessProbe:/d' ${chart_name}/templates/deployment.yaml"
+    sh "sed -i '/httpGet:/d' ${chart_name}/templates/deployment.yaml"
+    sh "sed -i '/path: \\//d' ${chart_name}/templates/deployment.yaml"
+    sh "sed -i '/port: http/d' ${chart_name}/templates/deployment.yaml"
+    sh "sed -i '/readinessProbe:/d' ${chart_name}/templates/deployment.yaml"
+    */
+    sh "sed -i '/livenessProbe:/,+7d' ${chart_name}/templates/deployment.yaml"
+    
+        
+    stage 'Building Container for Harbor'
+    docker.withRegistry("${registry_url}", "${docker_creds_id}") {
+    
+        // Set up the container to build 
+        maintainer_name = config.image.center
+        container_name = config.image.name
+        
+        stage "Building"
+        echo "Building Nginx with docker.build(${maintainer_name}/${container_name}:${build_tag})"
+        container = docker.build("${maintainer_name}/${container_name}:${build_tag}", '.')
+
+        stage "Pushing"
+        // input 'Do you approve Pushing?'
+        container.push()
+        
+        currentBuild.result = 'SUCCESS'
+        
+    }
+    
+    echo "ImageName(${config.image.harborip}/${maintainer_name}/${container_name})"
+    def imagename = "${config.image.harborip}/${maintainer_name}/${container_name}"
+    
+
+    stage ('helm test') {
+        
+      // run helm chart linter
+      helmLint(chart_dir)
+
+      // run dry-run helm chart installation
+      helmDeploy(
+        dry_run         : true,
+        name            : config.app.name,
+        chart_dir       : chart_dir,
+        tag             : build_tag,
+        replicas        : config.app.replicas,
+        cpu             : config.app.cpu,
+        memory          : config.app.memory,
+	namespace       : config.app.namespace,
+	imagename       : imagename,
+	pullPolicy      : config.image.pullPolicy,
+	type            : config.service.type,
+	sessionAffinity : config.service.sessionAffinity,
+	port            : config.service.port,
+        containerPort   : config.service.containerPort
+       )
+
+    }
+    
+    
+    stage ('helm deploy') {
+      
+      // Deploy using Helm chart
+      helmDeploy(
+        dry_run         : false,
+        name            : config.app.name,
+        chart_dir       : chart_dir,
+        tag             : build_tag,
+        replicas        : config.app.replicas,
+        cpu             : config.app.cpu,
+        memory          : config.app.memory,
+	namespace       : config.app.namespace,
+	imagename       : imagename,
+	pullPolicy      : config.image.pullPolicy,
+	type            : config.service.type,
+	sessionAffinity : config.service.sessionAffinity,
+	port            : config.service.port,
+        containerPort   : config.service.containerPort
+      )
+
+    }
+    
+    
+}

@@ -1,0 +1,28 @@
+{
+  "app": {
+    "name": "ficus-brace-view-shanghaikd-dev-rescloud",
+    "replicas": "3",
+    "cpu": 500m,
+    "memory": 2400Mi,
+    "namespace": "project-003"
+  },
+  "image": {
+    "harborip": "10.45.59.250",
+    "center": "ficus",
+    "name": "ficusbrace",
+    "tag": "latest",
+    "pullPolicy": "Always"
+  },
+  "service": {
+     "type": "LoadBalancer",
+     "sessionAffinity": "ClientIP",
+     "port": "8080",
+     "containerPort": "8080"
+  },
+  "pipeline": {
+      "enabled": true,
+      "library": {
+        "branch": "master"
+      }
+  }
+}
