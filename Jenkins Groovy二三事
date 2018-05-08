@@ -1,0 +1,5 @@
+1、jenkins自定义邮件模板放在master的/var/lib/jenkins/email-templates下即可
+其中/var/lib/jenkins是$JENKINS_HOME（用whereis jenkins可查，不要用echo $JENKINS_HOME)
+
+2、要想在jenkins pipeline、groovy email template等groovy脚本中访问mysql数据库，需要将
+mysql-connector-java-*.jar拷贝到/usr/java/packages/lib/ext/下，重启jenkins。
