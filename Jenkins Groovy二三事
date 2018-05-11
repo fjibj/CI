@@ -40,4 +40,20 @@ mysql-connector-java-*.jar拷贝到/usr/java/packages/lib/ext/下，重启jenkin
         sh "${dirpath}/finally*.sh"
     }
     
+5、利用邮件模板发邮件的pipeline写法：
+        stage("Send Email") {
+            steps {
+                script {
+                    def mailRecipients = 'abc@qq.com，cde@163.com'
+                    def jobName = currentBuild.fullDisplayName
+                    emailext body: '''${SCRIPT, template="test_interface2.template"}''',
+                    mimeType: 'text/html',
+                    subject: "[Jenkins] ${jobName}",
+                    to: "${mailRecipients}",
+                    replyTo: "${mailRecipients}",
+                    recipientProviders: [[$class: 'CulpritsRecipientProvider']]
+                }
+            }
+        }
+    
     
