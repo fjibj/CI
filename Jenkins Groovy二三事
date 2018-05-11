@@ -3,3 +3,41 @@
 
 2、要想在jenkins pipeline、groovy email template等groovy脚本中访问mysql数据库，需要将
 mysql-connector-java-*.jar拷贝到/usr/java/packages/lib/ext/下，重启jenkins。
+    def dbURL = 'jdbc:mysql://10.45.59.248:3306/adminset'
+    def dbUserName = 'root'
+    def dbPassword = ''
+    def dbDriver = 'com.mysql.jdbc.Driver'
+    def db
+    List statis
+    try{    
+        db = Sql.newInstance(dbURL,dbUserName,dbPassword,dbDriver)
+        statis = db.rows('SELECT center,module,passedrate,starttime,endtime FROM test_interface_statistics')
+        print statis
+        db.eachRow("select * from test_interface_statistics", { println it.id + " -- ${it.username} --"});
+    }catch(Exception e){
+        print e
+    }finally{
+        db.close()
+    }
+
+3、groovy中定义一个对象（拥有多个属性）并将该对象加到一个List中，可以采用定义一个map再加到list中的方式(list of maps)：
+    def mm = [:]
+    def list = []
+    mm = ['aaa':aaa,'bbb',bbb]  //aaa,bbb是预先定义和赋值的两个变更
+    list << mm //将mm添加到list中
+
+4、groovy中判断文件isFile()、isDirectory()等方法只能在jenkins master节点上运行，在slave上无法运行，只能采用findFiles、fileExists等方法
+    //用通配符查找文件，依次处理
+    def files = findFiles(glob: '**/*.postman_collection.json')
+    files.each{ f -> 
+        println f.path  //相对路径
+        println f.name  //文件名
+        ......
+    }
+    //查找文件,不支持通配符
+    def ff = fileExists("${dirpath}/finally.sh") 
+    if (ff) {
+        sh "${dirpath}/finally*.sh"
+    }
+    
+    
