@@ -61,4 +61,22 @@ mysql-connector-java-*.jar拷贝到/usr/java/packages/lib/ext/下，重启jenkin
         
 7、显示适当的时间格式
         import hudson.Util
-        println "Took ${Util.**getTimeSpanString**(System.currentTimeMillis() - currentBuild.startTimeInMillis)}"
+        println "Took ${Util.getTimeSpanString(System.currentTimeMillis() - currentBuild.startTimeInMillis)}"
+        
+8、在一个pipeline中并行执行其他job,并等待其job都执行完之后再执行下面的其他语句
+        stage('Build') {
+            steps { 
+               script{ 
+                    def jobs = ['a','b','c','d']   //a,b,c,d是job名称
+                    def branches = [:]
+                    jobs.each{ j ->
+                        branches[j] = {
+                            build job: j,parameters: [
+                                  string(name: 'param1', value:'test_param'),
+                                  string(name:'dummy', value: "${index}")]
+                        }
+                    }
+                    parallel branches   //并行执行并等待
+                 }  
+                 ......
+            } 
