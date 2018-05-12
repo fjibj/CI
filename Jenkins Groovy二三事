@@ -56,4 +56,9 @@ mysql-connector-java-*.jar拷贝到/usr/java/packages/lib/ext/下，重启jenkin
             }
         }
     
-    
+6、在jenkinsfile中获取scm中的其他文件，可以使用 
+        checkout scm
+        
+7、显示适当的时间格式
+        import hudson.Util
+        println "Took ${Util.**getTimeSpanString**(System.currentTimeMillis() - currentBuild.startTimeInMillis)}"
