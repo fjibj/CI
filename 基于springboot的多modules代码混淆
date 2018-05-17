@@ -1,0 +1,97 @@
+最近研究了一下代码混淆，采用的是proguard-maven-plugin，这个是目前最好用的混淆plugin，但在混淆多模块代码时遇到一些问题，将问题和解决方案在此说明一下
+
+代码结构：（注，结构图省略了源码部分）
+
+S
+├─A
+│  └─pom.xml
+├─B
+│  └─pom.xml
+├─proguard.conf
+└─pom.xml
+
+首先S即是聚合也是父亲，即S的pom.xml中有：
+<modules>
+    <module>A</module>
+    <module>B</module>
+</modules>
+在A、B的pom.xml中有：
+<parent>
+    <groupId>${S.groupId}</groupId>
+    <artifactId>${S.artifactId}</artifactId>
+    <version>${S.version}</version>
+</parent>
+注： ${S.groupId}表示S的groupId,需要换成在S的pom.xml中定义的<groupId>xxxx</groupId>中定义的xxxx。${S.artifactId}、${S.version}类似处理。
+
+由于S的类型是pom，即<packaging>pom</packaging>，因此在编译过程中S本身是不需要做任何编译相关的操作的，所有代码编译、混淆、打包、部署都是在子module上，同时考虑到混淆的配置比较复杂，不希望在每个子module重复定义，因此在S中只定义<pluginManagement>，在A、B中对其进行引用（此处折腾的比较久)
+
+S中的插件配置：
+  <build>
+		<pluginManagement>
+			<plugins>		
+				<plugin>
+					<groupId>com.github.wvengen</groupId>
+					<artifactId>proguard-maven-plugin</artifactId>
+					<executions>
+						<execution>
+							<phase>package</phase>
+							<goals><goal>proguard</goal></goals>
+						</execution>
+					</executions>
+					<configuration>
+						<proguardVersion>5.3.3</proguardVersion>
+						<obfuscate>true</obfuscate>
+						<proguardInclude>${project.basedir}/../proguard.conf</proguardInclude>
+					</configuration>
+					<dependencies>
+						<dependency>
+							<groupId>net.sf.proguard</groupId>
+							<artifactId>proguard-base</artifactId>
+							<version>5.3.3</version>
+						</dependency>
+					</dependencies>
+				</plugin>
+        <!-- spring-boot-maven-plugin必须在proguard-maven-plugin之后，才能使用混淆结果 -->
+				<plugin>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-maven-plugin</artifactId>
+					<executions>
+						<execution>
+							<goals>
+								<goal>repackage</goal>    <!-- 此处必须使用repackage重新打包，才能将混淆内容打入包中 -->
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+  </build>
+
+在A、B中对plugin的引用，只需要引用plugin的groupId和artifactId即可
+  <build>
+    <plugins>
+			<plugin>
+				<groupId>com.github.wvengen</groupId>
+				<artifactId>proguard-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+    </plugins>
+  </build>
+
+在S下执行： mvn clean package
+将会在A下生成：（注：A-1.0是“名称-版本号”）
+└─target
+     └─A-1.0.jar                -- 最终可执行springboot应用的jar包
+     └─A-1.0_proguard_base.jar  -- 混淆前的包
+     └─A-1.0.jar.original       -- 混淆后的包
+     └─proguard_map.txt         -- 混淆map，比如混淆前的哪个类（方法 ）对应到混淆后的哪个类（方法）
+     └─proguard_seed.txt        -- 参与混淆的类
+B下是类似的
+
+proguard.conf文件是通过proguardgui生成的，图形化界面，很方便
+cd proguard6.0.3/lib
+proguardgui.jar
+生成的proguard配置可以review/save/proceed以及load（加载）
