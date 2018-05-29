@@ -14,7 +14,7 @@
 -n 最小分配空间，key+value+flags默认是48
 
 
-** find . -name '*.jar' -exec bash -c 'jar -tf {} | grep -iH --label {} org/apache/hadoop/mapreduce/Job.class' \; **
+**find . -name '*.jar' -exec bash -c 'jar -tf {} | grep -iH --label {} org/apache/hadoop/mapreduce/Job.class' \;**
 用来查找当前目录及子目录下的哪个jar包中包含有org.apache.hadoop.mapreduce.Job类
 
 是当前目录下子目标也一并查找了么@方进 
