@@ -77,5 +77,27 @@ HashMap使用的是懒加载，构造完HashMap对象后，只要不进行put �
 
 10. java同步锁，自旋锁？
 
-java自旋锁：[https://blog.csdn.net/notOnlyRush/article/details/51027161](https://blog.csdn.net/notOnlyRush/article/details/51027161)
+CAS：Compare and Swap, 翻译成比较并交换。 
+
+java.util.concurrent包中借助CAS实现了区别于synchronouse同步锁的一种乐观锁，使用这些类在多核CPU的机器上会有比较好的性能.
+
+CAS有3个操作数，内存值V，旧的预期值A，要修改的新值B。当且仅当预期值A和内存值V相同时，将内存值V修改为B，否则什么都不做。
+
+(1)多核cpu如何去实现“原子操作”。相关知识点：缓存行（cacheline）、CPU流水线（CPU line）
+处理器保证系统从内存当中读取一个字节是原子的，意思是当一个处理器读取一个字节时，其他处理器是不能访问这个字节的地址的。最新的Intel X86能保证单处理器对同一缓存行里进行的16/32/64位操作是原子的。复杂的内存操作如跨总线宽度、跨缓存行，处理器通过总线锁定和缓存锁定来保证原子性。这两种机制Intel提供很多lock指令来实现，比如上文说的cmpxchg。
+(2)JDK文档说cas同时具有volatile读和volatile写的内存语义。
+针对上文说的cmpxchg指令，在多处理器下会加入LOCK前缀（LOCK  cmpxchg），单处理器会忽略LOCK前缀。
+Intel对lock前缀有特殊说明：
+1.根据内存区域不同提供总线锁定和缓存锁定。
+2.禁止改指令与之前和之后的读指令和写指令重排序。
+3.把写缓冲区的数据全部刷新到内存中。
+2、3点所具有的内存屏障效果，满足了volatile读和volatile写的内存语义。
+(3)CAS缺点：
+问题1：ABA问题
+因为CAS需要在操作值的时候检查下值有没有发生变化，如果没有发生变化则更新，但是如果一个值原来是A，变成了B，又变成了A，那么使用CAS进行检查时会发现它的值没有发生变化，但是实际上却变化了。ABA问题的解决思路就是使用版本号。在变量前面追加上版本号，每次变量更新的时候把版本号加一，那么A－B－A 就会变成1A-2B－3A。从Java1.5开始JDK的atomic包里提供了一个类AtomicStampedReference来解决ABA问题。这个类的compareAndSet方法作用是首先检查当前引用是否等于预期引用，并且当前标志是否等于预期标志，如果全部相等，则以原子方式将该引用和该标志的值设置为给定的更新值。
+问题2：循环时间长开销大。自旋CAS如果长时间不成功，会给CPU带来非常大的执行开销。如果JVM能支持处理器提供的pause指令那么效率会有一定的提升，pause指令有两个作用，第一它可以延迟流水线执行指令（de-pipeline）,使CPU不会消耗过多的执行资源，延迟的时间取决于具体实现的版本，在一些处理器上延迟时间是零。第二它可以避免在退出循环的时候因内存顺序冲突（memory order violation）而引起CPU流水线被清空（CPU pipeline flush），从而提高CPU的执行效率。
+
+参考：[https://blog.csdn.net/bohu83/article/details/51124065](https://blog.csdn.net/bohu83/article/details/51124065)
+
+参考：[https://blog.csdn.net/notOnlyRush/article/details/51027161](https://blog.csdn.net/notOnlyRush/article/details/51027161)
 
