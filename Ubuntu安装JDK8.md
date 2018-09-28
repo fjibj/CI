@@ -25,7 +25,7 @@ JDK8的安装
 
 编辑/etc/profile文件，在文件末尾添加如下3行：     
   export JAVA_HOME=/usr/lib/jdk1.8.0_45       
-  export CLASSPATH=.:JAVAHOME/lib:JAVAHOME/lib:JAVA_HOME/lib:JAVA_HOME/jre/lib:$CLASSPATH     
+  export CLASSPATH=.:$JAVA_HOME/lib:JAVAHOME/lib:$JAVA_HOME/lib:$JAVA_HOME/jre/lib:$CLASSPATH     
 
 这里没有在环境变量PATH中添加JAVA信息的原因是：之前通过apt安装的时候已经设置好了，所以不用添加。       
 并执行：    
