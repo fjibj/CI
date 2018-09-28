@@ -1,4 +1,4 @@
-virtualbox Ubuntu18 NAT方式下可以通过设置“端口转发”来实现宿主机对虚拟机的远程访问
+virtualbox Ubuntu18 NAT方式下可以通过设置“端口转发”来实现宿主机对虚拟机的远程访问     
 1.在virtualbox虚拟机的“网络”配置中设置“端口转发”规则
 <img src="nat1.jpg">
 
