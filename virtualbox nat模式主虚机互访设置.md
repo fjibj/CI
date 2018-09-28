@@ -9,13 +9,13 @@ virtualbox Ubuntu18 NAT方式下可以通过设置“端口转发”来实现宿
 修改 /etc/ssh/sshd_config文件，注意，安装了openssh才会有这个文件，如果文件不存在请检查是否安装了openssh。     
 vim /etc/ssh/sshd_config     
 找到     
-# Authentication:     
+\# Authentication:     
 LoginGraceTime 120      
 PermitRootLogin prohibit-password     
 StrictModes yes    
     
 改成     
-# Authentication:     
+\# Authentication:     
 LoginGraceTime 120     
 PermitRootLogin yes      
 StrictModes yes     
