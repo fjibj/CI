@@ -1,3 +1,5 @@
+Linux服务器批量建互信：
+
 1.执行 **bin/root_ssh_double_trust.sh**
 
 2.预先在**conf/ip_user_pwd_root**中配置与当前所在机器要建立互信机器的IP、用户名、密码
