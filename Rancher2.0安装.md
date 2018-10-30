@@ -1,43 +1,76 @@
-Ò»¡¢²Ù×÷ÏµÍ³ÉèÖÃ(7.2~7.5)
-    1.Í£·À»ğÇ½:
+ä¸€ã€æ“ä½œç³»ç»Ÿè®¾ç½®(7.2~7.5)
+
+    1.åœé˜²ç«å¢™:
+    
         a. systemctl stop firewalld.service
+        
         b. systemctl disable firewalld.service
+        
         c. setenforce 0
+        
         d. vim /etc/sysconfig/selinux
+        
              SELINUX=disabled
 
-    2.ÍøÂç×ª·¢²ÎÊıÉèÖÃ:
+    2.ç½‘ç»œè½¬å‘å‚æ•°è®¾ç½®:
+    
         a. echo "1" > /proc/sys/net/ipv4/ip_forward
+        
         b. echo "net.ipv4.ip_forward = 1"  >> /usr/lib/sysctl.d/00-system.conf
+        
 
-¶ş¡¢°²×°docker»·¾³
-    1.°²×°docker»ù´¡»·¾³(È±Ê¡1.12.6°æ±¾)
+äºŒã€å®‰è£…dockerç¯å¢ƒ
+
+    1.å®‰è£…dockeråŸºç¡€ç¯å¢ƒ(ç¼ºçœ1.12.6ç‰ˆæœ¬)
+    
         a. yum install docker
+        
         b. systemctl enable docker.service
+        
         c. systemctl start  docker.service
-        d. ²ÉÓÃ¹úÄÚ¾µÏñ¿â:
-            ĞŞ¸Ä/etc/docker/daemon.json ÎÄ¼ş²¢Ìí¼ÓÉÏ registry-mirrors ¼üÖµ:
+        
+        d. é‡‡ç”¨å›½å†…é•œåƒåº“:
+        
+            ä¿®æ”¹/etc/docker/daemon.json æ–‡ä»¶å¹¶æ·»åŠ ä¸Š registry-mirrors é”®å€¼:
+            
               {
                   "registry-mirrors": ["https://registry.docker-cn.com"]
               }
-            ĞŞ¸Ä±£´æºóÖØÆô Docker·şÎñ ÒÔÊ¹ÅäÖÃÉúĞ§¡£
-        e.Rancher2.0Æô¶¯kubelet±¨´íÔ¤·ÀÅäÖÃ:
-          a).ĞŞ¸Ä/etc/systemd/system/multi-user.target.wants/docker.serviceÖĞMountFlagsÉèÖÃ£¬Öµ´Óslave¸ÄÎªshared
+              
+            ä¿®æ”¹ä¿å­˜åé‡å¯ DockeræœåŠ¡ ä»¥ä½¿é…ç½®ç”Ÿæ•ˆã€‚
+            
+        e.Rancher2.0å¯åŠ¨kubeletæŠ¥é”™é¢„é˜²é…ç½®:
+        
+          a).ä¿®æ”¹/etc/systemd/system/multi-user.target.wants/docker.serviceä¸­MountFlagsè®¾ç½®ï¼Œå€¼ä»slaveæ”¹ä¸ºshared
+          
           b).systemctl daemon-reload
+          
           c).systemctl restart docker.service
+          
 
-    2.ÒÔÇ°°²×°¹ırancher»òk8sµÄÖ÷»ú»·¾³ÇåÀí
+    2.ä»¥å‰å®‰è£…è¿‡rancheræˆ–k8sçš„ä¸»æœºç¯å¢ƒæ¸…ç†
+    
         docker rm -f -v $(docker ps -aq) 
+        
         docker volume rm $(docker volume ls)
+        
         rm -rf /var/lib/etcd/
+        
         rm -rf /etc/kubernetes
+        
         docker rmi $(docker images -q)
 
-Èı¡¢°²×°Rancher2.0·şÎñ¶Ë»ò¿Í»§¶Ë:(ÒÔv2.0.8°æÎªÀı)
-    1.°²×°docker-server:
-        docker run -d --restart=unless-stopped -p 80:80 -p 443:443 rancher/rancher:v2.0.8
-        ä¯ÀÀÆ÷µÇÂ¼docker-serverËùÔÚÖ÷»úIPµÄ80¶Ë¿Ú,admin/admin
+ä¸‰ã€å®‰è£…Rancher2.0æœåŠ¡ç«¯æˆ–å®¢æˆ·ç«¯:(ä»¥v2.0.8ç‰ˆä¸ºä¾‹)
 
-    2.°²×°docker-agent:
-        ÔÚdocker-serverµÄ¼¯ÈºÅäÖÃ½çÃæ»ñÈ¡docker-agent°²×°ÃüÁîĞĞ:
+    1.å®‰è£…docker-server:
+    
+        docker run -d --restart=unless-stopped -p 80:80 -p 443:443 rancher/rancher:v2.0.8
+        
+        æµè§ˆå™¨ç™»å½•docker-serveræ‰€åœ¨ä¸»æœºIPçš„80ç«¯å£,admin/admin
+        
+    2.å®‰è£…docker-agent:
+    
+        åœ¨docker-serverçš„é›†ç¾¤é…ç½®ç•Œé¢è·å–docker-agentå®‰è£…å‘½ä»¤è¡Œ:
+        
         docker run -d --privileged --restart=unless-stopped --net=host -v /etc/kubernetes:/etc/kubernetes -v /var/run:/var/run rancher/rancher-agent:master --server https://192.168.137.131 --token 9455mjxzwfcscmtvdjjp25hvbjpzkrbjwrg87gnk2ws9qfzlp87jhf --ca-checksum 1d382c6629a720f33abac40caa96bf59262349e3a55bb9390fda8bb5967c5ff1 --etcd --controlplane --worker
+        
