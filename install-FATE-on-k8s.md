@@ -264,6 +264,57 @@ UUID                                	NAME	VERSION 	APPVERSION
 
 # kubectl logs -f pod/kubefate-7b877c5bd6-vdlpw -n kube-fate
 
-14. 测试toy-example
+14. 所有主机节点修改/etc/hosts文件：
 
+172.32.150.135   vcapp135 kubefate.net 9999.fateboard.kubefate.net 8888.fateboard.kubefate.net
+
+15. 测试toy-example
+
+# kubectl get pod -n fate-9999
+
+NAME                           READY     STATUS    RESTARTS   AGE
+
+egg0-f59f97ff6-kr759           1/1       Running   0          5h
+
+egg1-57898cd579-lwh77          1/1       Running   0          5h
+
+egg2-858fc99f4-mmt94           1/1       Running   0          5h
+
+federation-58c5867d6b-zmxbb    1/1       Running   0          5h
+
+meta-service-7dd88c8fc-lpq6w   1/1       Running   0          5h
+
+mysql-5f575c7947-6nbvg         1/1       Running   0          5h
+
+proxy-67b8665f75-c6kpw         1/1       Running   0          5h
+
+python-8786bcf8d-q6dpt         2/2       Running   0          5h
+
+redis-79ddf9c8d6-vm6lh         1/1       Running   0          5h
+
+roll-6579778b9c-d9wqx          1/1       Running   0          5h
+
+# kubectl exec -it python-8786bcf8d-q6dpt -c python -n fate-9999 -- bash
+
+(venv) [root@python-8786bcf8d-q6dpt python]# cd examples/toy_example/
+
+(venv) [root@python-8786bcf8d-q6dpt python]# python run_toy_example.py 9999 8888 1
+
+通过FATEBoard查看，对kubeFATE1.3需要修改fateboard服务将type由ClusterIP改成NodePort
+
+# kubectl edit svc/fateboard -n fate-8888
+
+# kubectl edit svc/fateboard -n fate-9999
+
+# kubectl get svc -n fate-8888|grep fateboard
+
+fateboard      NodePort    10.68.97.119    <none>        8080:24692/TCP      5h
+
+可通用 http://8888.fateboard.kubefate.net:24692 访问
+
+# kubectl get svc -n fate-9999|grep fateboard
+
+fateboard      NodePort    10.68.31.55     <none>        8080:15519/TCP      6h
+
+可通用 http://9999.fateboard.kubefate.net:15519 访问
 
