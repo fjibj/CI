@@ -157,7 +157,7 @@ ost/results/job_2020102210495595874943_secureboost_0_guest_10000_output_data dir
 ....
 
 
-大数据环境（未验证）
+7.大数据环境（未验证），仅列出参考文档
 
 部署：
 
@@ -166,4 +166,84 @@ https://github.com/FederatedAI/FATE/blob/master/cluster-deploy/doc/thirdparty_sp
 案例：
 
 https://github.com/FederatedAI/FATE/blob/master/examples/federatedml-1.x-examples/hetero_logistic_regression/test_spark_backend_job_conf.json
+
+8. FATE-Cloud部署（134上）
+
+参考： FATE-Cloud/README.md at master · FederatedAI/FATE-Cloud
+
+https://github.com/FederatedAI/FATE-Cloud/blob/master/README.md
+
+（1）vim default-configurations.sh
+
+system_user=app
+
+install_dir=/mnt/disk01/fangjin/projects/fate-cloud
+
+java_dir=/mnt/disk01/fangjin/projects/fate/common/jdk/jdk-8u192
+
+#cloud-manager
+
+cloud_ip=172.32.150.134
+
+cloud_port=9999
+
+cloud_db_ip=172.32.150.133
+
+cloud_db_name=cloud_manager
+
+cloud_db_user=root
+
+cloud_db_password=fate_dev
+
+cloud_db_dir=/mnt/disk01/fangjin/projects/fate/common/mysql/mysql-8.0.13
+
+#fateboard
+
+fateboard_branch=develop-1.2.1
+
+fateboard_db_dir=/mnt/disk01/fangjin/projects/fate/common/mysql/mysql-8.0.13
+
+fateboard_db_ip=(172.32.150.133 172.32.150.135)
+
+fateboard_db_name=fate_flow
+
+fateboard_db_user=root
+
+fateboard_db_password=fate_dev
+
+fateboard_ip=(172.32.150.133 172.32.150.135)
+
+fateboard_port=9090
+
+fate_flow_ip=(172.32.150.133 172.32.150.135)
+
+fate_flow_port=9380
+
+fate_path=/mnt/disk01/fangjin/projects/fate
+
+（2）修改/mnt/disk01/fangjin/projects/FATE-Cloud/cluster-deploy/scripts/deploy/deploy.sh
+
+和  /mnt/disk01/fangjin/projects/FATE-Cloud/cluster-deploy/scripts/deploy/cloud-manager/deploy.sh
+
+注释掉ping .......
+
+将${db_dir}/mysql.sock改成${db_dir}/run/mysql.sock （前面按step-by-step安装FATE集群时mysql.sock的位置在run/下面
+
+（3）在/mnt/disk01/fangjin/projects/FATE-Cloud/cluster-deploy/scripts/deploy/下运行
+
+sh deploy.sh all install
+
+注： 需要预先安装好maven
+
+（4）控制台
+
+http://172.32.150.134:9999/cloud-manager/#/federal/site
+
+http://172.32.150.133:9090/fateManagerIndex#/fate/system/cfg
+
+http://172.32.150.135:9090/fateManagerIndex#/fate/system/cfg
+
+
+
+
 
