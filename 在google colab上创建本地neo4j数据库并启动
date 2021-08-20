@@ -1,0 +1,16 @@
+# 创建一个本地的neo4j数据库并启动
+
+# download 3.5.8 or neo4j-enterprise-4.0.0-alpha09mr02-unix
+!curl http://dist.neo4j.org/neo4j-community-3.5.8-unix.tar.gz -o neo4j.tar.gz
+# decompress and rename
+!tar -xf neo4j.tar.gz  # or --strip-components=1
+!mv neo4j-community-3.5.8 nj
+# disable password, and start server
+!sed -i '/#dbms.security.auth_enabled/s/^#//g' nj/conf/neo4j.conf
+!nj/bin/neo4j start
+
+!pip install pandas neo4j scikit-learn karateclub
+
+from neo4j import GraphDatabase
+host = 'bolt://localhost:7687'
+driver = GraphDatabase.driver(host)
