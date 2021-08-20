@@ -1,12 +1,24 @@
-# 创建一个本地的neo4j数据库并启动
+# 创建一个本地的neo4j数据库及其插件并启动
 
-# download 3.5.8 or neo4j-enterprise-4.0.0-alpha09mr02-unix
-!curl http://dist.neo4j.org/neo4j-community-3.5.8-unix.tar.gz -o neo4j.tar.gz
+# download 4.3.3
+!curl http://dist.neo4j.org/neo4j-community-4.3.3-unix.tar.gz -o neo4j.tar.gz
 # decompress and rename
 !tar -xf neo4j.tar.gz  # or --strip-components=1
-!mv neo4j-community-3.5.8 nj
+!mv neo4j-community-4.3.3 nj
 # disable password, and start server
 !sed -i '/#dbms.security.auth_enabled/s/^#//g' nj/conf/neo4j.conf
+!nj/bin/neo4j start
+
+# install Neo4j Graph Data Science (GDS) library安装GDS
+%cd nj/plugins/
+!wget https://s3-eu-west-1.amazonaws.com/com.neo4j.graphalgorithms.dist/graph-data-science/neo4j-graph-data-science-1.6.4-standalone.zip
+!unzip neo4j-graph-data-science-1.6.4-standalone.zip
+## 手工修改nj/conf/neo4j.conf
+dbms.security.procedures.unrestricted=gds.*
+dbms.security.procedures.allowlist=gds.*
+# 重启neo4j
+%cd ../..
+!nj/bin/neo4j stop
 !nj/bin/neo4j start
 
 !pip install pandas neo4j scikit-learn karateclub
