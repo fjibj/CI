@@ -1,7 +1,7 @@
 RDP  3秒
 
 1. 虚拟机中安装xrdp：
-2. 
+
 $ sudo yum install -y epel-release
 
 $ sudo yum install -y xrdp
@@ -13,7 +13,7 @@ $ sudo systemctl start xrdp
 2. guacamole-server需要安装freerdp
 
 3. user-mapping.xml配置：
-4. 
+
                 <connection name="centosvnc-4-rdp">
 	
                         <protocol>rdp</protocol>
