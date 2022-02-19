@@ -418,6 +418,97 @@ Error from server (NotFound): pods "simple" not found
   
 76081
 
+ 
+# 离线迁移
+
+checkpoint的恢复：
+ 
+you can use the sample template in https://github.com/SSU-DCN/podmigration-operator/blob/main/config/samples/podmig_v1_restore.yaml to create start applications from checkpoint image with the path of checkpoint data, called snapshotPath, defined inside.
+
+# cat restore_t1.yaml 
+ 
+apiVersion: podmig.dcn.ssu.ac.kr/v1
+ 
+kind: Podmigration
+ 
+metadata:
+ 
+  name: test
+ 
+  labels:
+ 
+    name: test
+ 
+spec:
+ 
+  replicas: 1
+ 
+  action: restore
+ 
+  snapshotPath: /var/lib/kubelet/migration/kkk/simple
+ 
+  destHost: k8s-node01
+ 
+  selector:
+ 
+    podmig: dcn
+ 
+  # When restore a number of pods from existing checkpoint infomation, a pre-template should be defined to pre-create a new pod first, then the checkpoint info will be loaded
+ 
+  template:
+ 
+    metadata:
+ 
+      name: simple
+ 
+      labels:
+ 
+        name: simple
+ 
+    spec:
+ 
+      containers:
+ 
+      - name: count
+ 
+        image: alpine
+ 
+        ports:
+ 
+        - containerPort: 80
+ 
+          protocol: TCP
+
+[root@k8s-master01 samples]# kubectl apply -f restore_t1.yaml 
+ 
+podmigration.podmig.dcn.ssu.ac.kr/test created
+ 
+[root@k8s-master01 samples]# kubectl get pod -o wide
+ 
+NAME                    READY   STATUS    RESTARTS   AGE   IP             NODE         NOMINATED NODE   READINESS GATES
+ 
+simple-migration-0      1/1     Running   0          63m   10.244.1.9     k8s-node02   <none>           <none>
+ 
+simple2-migration-42    1/1     Running   0          74m   10.244.2.114   k8s-node01   <none>           <none>
+ 
+test-79b887d8dd-dcvx7   1/1     Running   0          20s   10.244.2.115   k8s-node01   <none>           <none>
+ 
+
+[root@k8s-master01 samples]# kubectl logs -f pod/test-79b887d8dd-dcvx7
+ 
+86240
+ 
+86241
+ 
+86242
+ 
+86243
+ 
+86244
+ 
+# very good!
+ 
+
   
 # 获得迁移：
   
