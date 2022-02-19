@@ -1,41 +1,59 @@
-（仅是安装过程中的一些记录，未详细整理）
-k8s+containerd+podmigration
+k8s+containerd+podmigration安装及使用小记
 
+1. CentOS7下 kubernetes containerd版安装
 
----------------------------------------
-yum安装snap (不需要安装snap）
+参考：https://blog.csdn.net/flywingwu/article/details/113482681
 
-https://www.linuxidc.com/Linux/2020-03/162485.htm
+以下记录一些与参考文档不同的内容和注意点（下同）
 
-setenforce 0
+（1）containerd客户端安装：
 
+wget https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.19.0/crictl-v1.19.0-linux-amd64.tar.gz
 
-设置snap代理：
+tar zxvf crictl-v1.19.0-linux-amd64.tar.gz -C /usr/local/bin
 
-在/etc/environment中加入：
+（2）containerd设置代理：
 
-http_proxy=http://[服务器地址]:[端口号]
+#mkdir /etc/systemd/system/containerd.service.d
 
-https_proxy=http://[服务器地址]:[端口号]
+#vim  /etc/systemd/system/containerd.service.d/http_proxy.conf
 
-snap set system proxy.http="http://xxxx:yy"
+[Service]
 
-snap set system proxy.https="http://xxxx:yy"
+Environment="HTTP_PROXY=http://xxxx:yy" "HTTPS_PROXY=http://xxxx:yy" "NO_PROXY=zzzz"
 
+（3）安装特定版本contaierd
 
-snap install go --classic
+参考 https://github.com/SSU-DCN/podmigration-operator/blob/main/init-cluster-containerd-CRIU.md
 
-/var/lib/snapd/snap/bin/go
+step1 和 step2
 
----------------------------------------
+containerd config default > /etc/containerd/config.toml
 
+修改config.toml
 
-yum install -y kubelet-1.19.0 kubeadm-1.19.0 kubectl-1.19.0 --disableexcludes=kubernetes
+sandbox_image = "registry.aliyuncs.com/google_containers/pause:3.2"
 
-systemctl enable --now kubelet
+[plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
+        runtime_type = "io.containerd.runtime.v1.linux"
+        runtime_engine = "/usr/local/bin/runc"
+        runtime_root = ""
 
+（4）kubeadm配置：
 
-# 编译k8s : https://github.com/vutuong/kubernetes
+$ vim /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf 
+
+#加入下面内容
+
+Environment="KUBELET_EXTRA_ARGS=--container-runtime=remote --runtime-request-timeout=15m --container-runtime-endpoint=unix:///run/containerd/containerd.sock"
+
+yum install -y kubelet-1.19.0 kubeadm-1.19.0 kubectl-1.19.0
+
+systemctl enable kubelet.service
+
+（5）编译特定版本k8s并替换kubeadm 和 kubelet
+
+（5.1）安装和配置golang
 
 yum -y install golang
 
@@ -56,6 +74,12 @@ go env -w GO111MODULE=on
 go env -w GOPROXY="https://goproxy.cn,direct"
 
 
+（5.2）编译定制版k8s : https://github.com/vutuong/kubernetes
+
+
+参考 https://github.com/SSU-DCN/podmigration-operator/blob/main/init-cluster-containerd-CRIU.md
+
+Step 4 ~ Step 7
 
 cd kubernetes
 
@@ -63,140 +87,33 @@ make
 
 编译好的放在_output/local/bin下
 
-彻底清除docker：https://www.ydyno.com/archives/1278.html
+（5.3）在所有node上
 
-docker kill $(docker ps -a -q)
+$ git clone https://github.com/SSU-DCN/podmigration-operator.git
 
-docker rm $(docker ps -a -q)
+注意：podmigration-operator目录与kubernetes目录放在同一层
 
-docker rmi $(docker images -q)
+$ cd podmigration-operator
 
-systemctl stop docker
+$ tar -vxf binaries.tar.bz2
 
-rm -rf /etc/docker
+$ cd custom-binaries
 
-rm -rf /run/docker
+$ chmod +x kubeadm kubelet
 
-rm -rf /var/lib/dockershim
+先备份/usr/bin/kubeadm和kubelet
 
-rm -rf /var/lib/docker
+$ sudo mv kubeadm kubelet /usr/bin/ （如果5.2步做了编译，用编译后的kubeadm和kubelet）
 
-rm -f /usr/bin/docker*
+（6）安装CRIU
 
-umount /var/lib/docker/devicemapper
+！！必须自己编译安装
 
-yum list installed | grep docker #查看已安装的docker包
+https://criu.org/Installation
 
-yum remove docker-engine docker-engine-selinux.noarch
+#criu check --all
 
-# 彻底删除k8s
-
-kubeadm reset -f
-
-yum remove -y kubelet-1.19.0 kubeadm-1.19.0 kubectl-1.19.0
-
-rm -rf /etc/cni /etc/kubernetes /var/lib/dockershim /var/lib/etcd /var/lib/kubelet /var/run/kubernetes ~/.kube/* /etc/systemd/system/kube*
-
-
-# Kubernetes集群之清除集群
-https://o-my-chenjian.com/2017/05/11/Clear-The-Cluster-Of-K8s/
-
-
-swapoff -a
-
-kubeadm reset
-
-modprobe br_netfilter
-
-echo '1' > /proc/sys/net/ipv4/ip_forward
-
-kubeadm init
-
-systemctl status kubelet
-
------------------------------------------------------------------------------------------------------------------------
-
-# CentOS7下 kubernetes containerd版安装 （OK）
-
-https://blog.csdn.net/flywingwu/article/details/113482681
-
-wget https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.19.0/crictl-v1.19.0-linux-amd64.tar.gz
-
-tar zxvf crictl-v1.19.0-linux-amd64.tar.gz -C /usr/local/bin
-
-containerd设置代理：
-
-#mkdir /etc/systemd/system/containerd.service.d
-
-#vim  /etc/systemd/system/containerd.service.d/http_proxy.conf
-
- [Service]
-
-Environment="HTTP_PROXY=http://172.32.147.188:9999" "HTTPS_PROXY=http://172.32.147.188:9999" "NO_PROXY=kubefate.net,172.32.150.133,172.32.150.134,172.32.150.135,8.8.8.8,114.114.114.114,127.0.0.1,localhost,172.32.0.0/12,10.96.0.0/12,192.168.0.0/16"
-
-#重启containerd 
-
-$ systemctl daemon-reload 
-
-$ systemctl restart containerd
-
-解决coredns 0/1问题：（清除所有iptables规则，慎用！！！）
-
-iptables -P INPUT ACCEPT
-
-iptables -P FORWARD ACCEPT
-
-iptables -P OUTPUT ACCEPT
-
-iptables -F
-
-$ vim /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf 
-
-#加入下面内容
-
-Environment="KUBELET_EXTRA_ARGS=--container-runtime=remote --runtime-request-timeout=15m --container-runtime-endpoint=unix:///run/containerd/containerd.sock"
-
-yum install -y kubelet-1.19.0 kubeadm-1.19.0 kubectl-1.19.0
-
-systemctl enable kubelet.service
-
-如果加入集群的指令找不到了，可以使用下面命令重新获得：
-
-kubeadm token create --print-join-command
-
-登录到node节点，确保已经安装了docker和kubeadm，kubelet，kubectl，执行：
-
-kubeadm join 172.32.150.133:6443 --token abcdef.0123456789abcdef \
-    --discovery-token-ca-cert-hash sha256:841686098dd5c2a34e7f1e872d6daab969853ba11566190b7d845fadb9ccc02c 
-
-kubeadm join 172.32.150.133:6443 --token wp9k1h.lvoy8darcdmwk98b     --discovery-token-ca-cert-hash sha256:841686098dd5c2a34e7f1e872d6daab969853ba11566190b7d845fadb9ccc02c
-
-mkdir ~/.kube
-
-vim ~/.kube/config
-
-and copy the config file from mster node to nodes config file
-
-
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-# 安装特定contaierd
-
-参考 https://github.com/SSU-DCN/podmigration-operator/blob/main/init-cluster-containerd-CRIU.md
-
-step1 和 step2
-
-containerd config default > /etc/containerd/config.toml
-
-修改config.toml
-
-sandbox_image = "registry.aliyuncs.com/google_containers/pause:3.2"
-
-[plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
-        runtime_type = "io.containerd.runtime.v1.linux"
-        runtime_engine = "/usr/local/bin/runc"
-        runtime_root = ""
-
+（7）重启containerd 和 kubelet
 
 systemctl daemon-reload
 
@@ -210,37 +127,11 @@ systemctl restart kubelet
 
 systemctl status kubelet
 
-journalctl -xfu kubelet
+（7）安装NFS共享目录
 
-# 强制删除pod（慎用）
+参考：https://cloud.tencent.com/developer/article/1721166
 
-kubectl delete pod xxx --force --grace-period=0
-
-在所有node上
-
-$ git clone https://github.com/SSU-DCN/podmigration-operator.git
-
-$ cd podmigration-operator
-
-$ tar -vxf binaries.tar.bz2
-
-$ cd custom-binaries
-
-$ chmod +x kubeadm kubelet
-
-先备份/usr/bin/kubeadm和kubelet
-
-$ sudo mv kubeadm kubelet /usr/bin/
-
-git clone https://github.com/vutuong/kubernetes.git
-
-将kubernetes目录与podmigration-operator放在同一层
-
-# 安装NFS共享目录
-
-https://cloud.tencent.com/developer/article/1721166
-
-·	Config NFS server at Master node
+（7.1）Config NFS server at Master node
 
 mkdir -p /var/lib/kubelet/migration/
 
@@ -265,7 +156,7 @@ systemctl enable rpcbind
 systemctl enable nfs
 
 
-·	Config NFS client at every worker nodes
+（7.2）Config NFS client at every worker nodes
 
 yum -y install rpcbind
 
@@ -281,11 +172,12 @@ vim /etc/rc.d/rc.local
 
 mount -t nfs 172.32.150.133:/var/lib/kubelet/migration/ /var/lib/kubelet/migration/ -o nolock,nfsvers=3,vers=3
 
-df -h
+查看本机挂载卷：df -h
 
-# podmigration-operator
 
-·	To run Podmigration operator, which includes CRD and a custom controller:
+2. Checkpoint 、Restore 和 Migrate 操作
+
+（1） To run Podmigration operator, which includes CRD and a custom controller:
 
 $ git clone https://github.com/SSU-DCN/podmigration-operator.git
 
@@ -295,19 +187,29 @@ go install sigs.k8s.io/kustomize/v3/cmd/kustomize@latest
 
 make manifests
 
---------------------
-
-·	To run api-server, which enables kubectl migrate command and GUI:
+（2） To run api-server, which enables kubectl migrate command and GUI:
 
 $ go run ./api-server/cmd/main.go
 
-------------------------------
+（3） To install kubectl migrate/checkpoint command, follow the guide at https://github.com/SSU-DCN/podmigration-operator/tree/main/kubectl-plugin
 
-·	To install kubectl migrate/checkpoint command, follow the guide at https://github.com/SSU-DCN/podmigration-operator/tree/main/kubectl-plugin
+修改：
 
-cd podmigration-operator/kubectl-plugin/
+vim /mnt/disk01/fangjin/projects/containerd/podmigration-operator/kubectl-plugin/checkpoint-command/checkpoint_command.go
 
-·	To run GUI:
+//config, _ := clientcmd.BuildConfigFromFlags("", "/home/dcn/fault-detection/docs/anisble-playbook/kubernetes-the-hard-way/admin.kubeconfig")
+
+config, _ := clientcmd.BuildConfigFromFlags("", "/root/.kube/config")
+
+# kubectl checkpoint simple /var/lib/kubelet/migration/simple
+
+$ cd checkpoint-command
+
+$ go build -o kubectl-checkpoint
+
+$ cp kubectl-checkpoint /usr/local/bin
+
+（4） To run GUI:
 
 先升级gcc
 
@@ -331,64 +233,35 @@ $ export CXXFLAGS="--std=c++17" && npm install
 
 $ npm run serve
  
+（5）跑个例子：
 
-# 安装CRIU
-
-！！必须自己编译安装
-
-https://criu.org/Installation
-
-#criu check --all
-
-
-# 跑个例子：
+（5.1）热迁移案例
 
 cd podmigration-operator/config/samples/migration-example
 
 vim 1.yaml 
 
-……
+	……
 
-nodeSelector:
+	nodeSelector:
 
-    	kubernetes.io/hostname: k8s-node02
+    		kubernetes.io/hostname: k8s-node02
 
 kubectl apply -f 1.yaml
 
 kubectl get pods -o wide
 
 
-修改：
-
-vim /mnt/disk01/fangjin/projects/containerd/podmigration-operator/kubectl-plugin/checkpoint-command/checkpoint_command.go
-
-//config, _ := clientcmd.BuildConfigFromFlags("", "/home/dcn/fault-detection/docs/anisble-playbook/kubernetes-the-hard-way/admin.kubeconfig")
-
-config, _ := clientcmd.BuildConfigFromFlags("", "/root/.kube/config")
-
-# kubectl checkpoint simple /var/lib/kubelet/migration/simple
-
-$ cd checkpoint-command
-
-$ go build -o kubectl-checkpoint
-
-$ cp kubectl-checkpoint /usr/local/bin
-
-
-
-
 vim test1.yaml
 
-……
+	……
 
-destHost: k8s-node01
+	destHost: k8s-node01
 
 kubectl apply -f test1.yaml
 
 
 curl --request POST 'localhost:5000/Podmigrations' --header 'Content-Type: application/json' --data '{"name":"test1", "replicas":1, "action":"live-migration", "sourcePod":"simple", "destHost":"k8s-node01"}'
-
-
 
 curl --request GET 'localhost:5000/Podmigrations'
 
@@ -419,7 +292,7 @@ Error from server (NotFound): pods "simple" not found
 76081
 
  
-# 离线迁移
+（5.2）离线迁移案例
 
 checkpoint的恢复：
  
@@ -508,12 +381,94 @@ test-79b887d8dd-dcvx7   1/1     Running   0          20s   10.244.2.115   k8s-no
  
 # very good!
  
-
   
-# 获得迁移：
+# 获得迁移的kubectl命令：
   
 kubectl get podmigrations
 
+
+3. 注意点：
+
+（1）解决coredns 0/1问题：（清除所有iptables规则，慎用！！！）
+
+iptables -P INPUT ACCEPT
+
+iptables -P FORWARD ACCEPT
+
+iptables -P OUTPUT ACCEPT
+
+iptables -F
+
+
+（2）如果加入集群的指令找不到了，可以使用下面命令重新获得：
+
+kubeadm token create --print-join-command
+
+添加节点到kubernetes集群：
+
+登录到node节点，确保已经安装了docker和kubeadm，kubelet，kubectl，执行：
+
+kubeadm join 172.32.150.133:6443 --token abcdef.0123456789abcdef \
+    --discovery-token-ca-cert-hash sha256:xxxxxxxxxxxxxxx 
+
+
+（3）copy the config file（~/.kube/config） from mster node to nodes config file
+
+（4）其他配置
+
+swapoff -a
+
+modprobe br_netfilter
+
+echo '1' > /proc/sys/net/ipv4/ip_forward
+
+
+
+安装过程中用过的一些非常手段，慎用：
+
+（1）彻底清除docker：https://www.ydyno.com/archives/1278.html
+
+docker kill $(docker ps -a -q)
+
+docker rm $(docker ps -a -q)
+
+docker rmi $(docker images -q)
+
+systemctl stop docker
+
+rm -rf /etc/docker
+
+rm -rf /run/docker
+
+rm -rf /var/lib/dockershim
+
+rm -rf /var/lib/docker
+
+rm -f /usr/bin/docker*
+
+umount /var/lib/docker/devicemapper
+
+yum list installed | grep docker #查看已安装的docker包
+
+yum remove docker-engine docker-engine-selinux.noarch
+
+（2）彻底删除k8s
+
+kubeadm reset -f
+
+yum remove -y kubelet-1.19.0 kubeadm-1.19.0 kubectl-1.19.0
+
+rm -rf /etc/cni /etc/kubernetes /var/lib/dockershim /var/lib/etcd /var/lib/kubelet /var/run/kubernetes ~/.kube/* /etc/systemd/system/kube*
+
+（3）Kubernetes集群之清除集群
+https://o-my-chenjian.com/2017/05/11/Clear-The-Cluster-Of-K8s/
+
+kubeadm reset （回滚kubeadm init或kubeadm join操作）
+
+
+（4）强制删除pod（慎用）
+
+kubectl delete pod xxx --force --grace-period=0
 
 checkpoint之后删除pod失败：（貌似不行）
   
@@ -522,3 +477,7 @@ echo 1 > /proc/sys/fs/may_detach_mounts
 或者
   
 sysctl -w fs.may_detach_mounts=1
+
+（5）查看kubelet日志
+
+journalctl -xfu kubelet
