@@ -279,7 +279,7 @@ simple-migration-29   1/1     Running       0          8m27s   10.244.2.111   k8
   
 Error from server (NotFound): pods "simple" not found
   
-[root@k8s-master01 ~]# kubectl logs pod/simple-migration-29
+#kubectl logs pod/simple-migration-29
   
 76077
   
@@ -379,13 +379,7 @@ test-79b887d8dd-dcvx7   1/1     Running   0          20s   10.244.2.115   k8s-no
  
 86244
  
-# very good!
- 
-  
-# 获得迁移的kubectl命令：
-  
-kubectl get podmigrations
-
+very good!
 
 3. 注意点：
 
@@ -481,3 +475,7 @@ sysctl -w fs.may_detach_mounts=1
 （5）查看kubelet日志
 
 journalctl -xfu kubelet
+	
+（6）查看迁移的kubectl命令：
+  
+kubectl get podmigrations
