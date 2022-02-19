@@ -479,3 +479,5 @@ journalctl -xfu kubelet
 （6）查看迁移的kubectl命令：
   
 kubectl get podmigrations
+	
+# 关于安装及使用过程中遇到的一些问题及解决思路，可以参考我与podmigration-operator源码作者的讨论：https://github.com/SSU-DCN/podmigration-operator/issues/6
