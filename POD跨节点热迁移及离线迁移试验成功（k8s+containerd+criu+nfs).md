@@ -201,7 +201,7 @@ vim /mnt/disk01/fangjin/projects/containerd/podmigration-operator/kubectl-plugin
 
 config, _ := clientcmd.BuildConfigFromFlags("", "/root/.kube/config")
 
-# kubectl checkpoint simple /var/lib/kubelet/migration/simple
+#kubectl checkpoint simple /var/lib/kubelet/migration/simple
 
 $ cd checkpoint-command
 
@@ -267,7 +267,7 @@ curl --request GET 'localhost:5000/Podmigrations'
 
 成功！
 
-[root@k8s-master01 ~]# kubectl get pod -o wide
+#kubectl get pod -o wide
 
 NAME                  READY   STATUS        RESTARTS   AGE     IP             NODE         NOMINATED NODE   READINESS GATES
 
@@ -275,7 +275,7 @@ simple                1/1     Terminating   0          21h     10.244.1.6     k8
   
 simple-migration-29   1/1     Running       0          8m27s   10.244.2.111   k8s-node01   <none>           <none>
   
-[root@k8s-master01 ~]# kubectl logs pod/simple
+#kubectl logs pod/simple
   
 Error from server (NotFound): pods "simple" not found
   
@@ -298,7 +298,7 @@ checkpoint的恢复：
  
 you can use the sample template in https://github.com/SSU-DCN/podmigration-operator/blob/main/config/samples/podmig_v1_restore.yaml to create start applications from checkpoint image with the path of checkpoint data, called snapshotPath, defined inside.
 
-# cat restore_t1.yaml 
+#cat restore_t1.yaml 
  
 apiVersion: podmig.dcn.ssu.ac.kr/v1
  
@@ -326,7 +326,7 @@ spec:
  
     podmig: dcn
  
-  # When restore a number of pods from existing checkpoint infomation, a pre-template should be defined to pre-create a new pod first, then the checkpoint info will be loaded
+  #When restore a number of pods from existing checkpoint infomation, a pre-template should be defined to pre-create a new pod first, then the checkpoint info will be loaded
  
   template:
  
@@ -352,11 +352,11 @@ spec:
  
           protocol: TCP
 
-[root@k8s-master01 samples]# kubectl apply -f restore_t1.yaml 
+#kubectl apply -f restore_t1.yaml 
  
 podmigration.podmig.dcn.ssu.ac.kr/test created
  
-[root@k8s-master01 samples]# kubectl get pod -o wide
+#kubectl get pod -o wide
  
 NAME                    READY   STATUS    RESTARTS   AGE   IP             NODE         NOMINATED NODE   READINESS GATES
  
@@ -367,7 +367,7 @@ simple2-migration-42    1/1     Running   0          74m   10.244.2.114   k8s-no
 test-79b887d8dd-dcvx7   1/1     Running   0          20s   10.244.2.115   k8s-node01   <none>           <none>
  
 
-[root@k8s-master01 samples]# kubectl logs -f pod/test-79b887d8dd-dcvx7
+#kubectl logs -f pod/test-79b887d8dd-dcvx7
  
 86240
  
