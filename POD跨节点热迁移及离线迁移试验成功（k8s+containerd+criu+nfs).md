@@ -1,4 +1,4 @@
-k8s+containerd+podmigration安装及使用小记
+# k8s+containerd+podmigration安装及使用小记
 
 1. CentOS7下 kubernetes containerd版安装
 
