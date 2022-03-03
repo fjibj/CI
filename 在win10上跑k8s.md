@@ -71,15 +71,16 @@ microk8s enable prometheus
 microk8s kubectl port-forward -n monitoring service/grafana --address 0.0.0.0 3000:3000  #开启Grafana 的Web UI ( http://localhost:3000 ) (预设登入帐号密码为admin/ admin)
 microk8s kubectl port-forward -n monitoring service/prometheus-k8s --address 0.0.0.0 9090:9090 #开启Prometheus 的Web UI ( http://localhost:9090 )
 
-缺包统一采用上面进入microk8s-vm
-，sudo docker search, tag, save, import的方式处理
+kubectl get all -o wide --all-namespaces
+
+```
+
+# 缺包统一采用上面进入microk8s-vm，sudo docker search, tag, save, import的方式处理
 参考：win10 下 microk8s安装记录
 https://blog.csdn.net/weixin_46359306/article/details/119546083
 
 
-kubectl get all -o wide --all-namespaces
 
-```
 
 通过snap方式安装docker，daemon.json文件的位置
 /var/snap/docker/current/config
