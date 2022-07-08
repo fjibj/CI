@@ -1,0 +1,194 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    name: lxc0001
+    vncserver: lxc0001
+  name: lxc0001
+  namespace: z160000001557
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: lxc0001
+  template:
+    metadata:
+      annotations:
+        cni.projectcalico.org/ipAddrs: '["172.20.1.239"]'
+      labels:
+        vncserver: lxc0001
+        name: lxc0001
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 172.32.151.117
+      containers:
+      - env:
+        - name: KUBERNETES_PODIP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: KUBERNETES_PODNAME
+          value: lxc0001
+        image: harbor.paas.nl:80/nlsxpt_raw/centos7-xrdp-nopri-systemd-shim3:20220628
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          exec:
+            command:
+            - ls
+          failureThreshold: 3
+          initialDelaySeconds: 2
+          periodSeconds: 2
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: lxc0001
+        ports:
+        - containerPort: 3389
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 10
+          initialDelaySeconds: 2
+          periodSeconds: 2
+          successThreshold: 1
+          exec:
+            command:
+            - /bin/bash 
+            - -c
+            - "ps -ef | grep -v grep | grep sshd"
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: "2"
+            memory: 8Gi
+          requests:
+            cpu: "1"
+            memory: 2Gi
+        volumeMounts:
+        - mountPath: /media
+          name: installpkg
+          readOnly: true
+        - name: clusterconf
+          mountPath: "/tools/conf" 
+        - name: cgroup
+          mountPath: "/sys/fs/cgroup"
+          readOnly: true
+        - mountPath: /var/lib/lxc
+          mountPropagation: HostToContainer
+          readOnly: true
+          name: lxcfs-shared
+        - mountPath: /proc/cpuinfo
+          readOnly: true
+          name: lxcfs-proc-cpuinfo
+        - mountPath: /sys/devices/system/cpu/online
+          readOnly: true
+          name: system-cpu-online
+        - mountPath: /proc/diskstats
+          readOnly: true
+          name: lxcfs-proc-diskstats
+        - mountPath: /proc/meminfo
+          readOnly: true
+          name: lxcfs-proc-meminfo
+        - mountPath: /proc/stat
+          readOnly: true
+          name: lxcfs-proc-stat
+        - mountPath: /proc/uptime
+          readOnly: true
+          name: lxcfs-proc-uptime
+        - mountPath: /proc/swaps
+          readOnly: true
+          name: lxcfs-proc-swaps
+        - mountPath: /proc/loadavg
+          readOnly: true
+          name: lxcfs-proc-loadavg
+      dnsPolicy: ClusterFirst
+      hostname: master
+      imagePullSecrets:
+      - name: dockercfgz160000001557
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /home
+          type: ""
+        name: installpkg
+      - hostPath:
+          path: /sys/fs/cgroup
+        name: cgroup
+      - name: clusterconf
+        configMap:
+          name: lxc0001-conf
+          defaultMode: 0777
+          items:
+          - key: cluster.conf
+            path: cluster.conf
+      - hostPath:
+          path: /var/lib/lxc
+          type: DirectoryOrCreate
+        name: lxcfs-shared
+      - hostPath:
+          path: /var/lib/lxc/lxcfs/proc/cpuinfo
+          type: File
+        name: lxcfs-proc-cpuinfo
+      - hostPath:
+          path: /var/lib/lxc/lxcfs/sys/devices/system/cpu/online
+          type: File
+        name: system-cpu-online
+      - hostPath:
+          path: /var/lib/lxc/lxcfs/proc/diskstats
+          type: File
+        name: lxcfs-proc-diskstats
+      - hostPath:
+          path: /var/lib/lxc/lxcfs/proc/meminfo
+          type: File
+        name: lxcfs-proc-meminfo
+      - hostPath:
+          path: /var/lib/lxc/lxcfs/proc/swaps
+          type: File
+        name: lxcfs-proc-swaps
+      - hostPath:
+          path: /var/lib/lxc/lxcfs/proc/loadavg
+          type: File
+        name: lxcfs-proc-loadavg
+      - hostPath:
+          path: /var/lib/lxc/lxcfs/proc/stat
+          type: File
+        name: lxcfs-proc-stat
+      - hostPath:
+          path: /var/lib/lxc/lxcfs/proc/uptime
+          type: File
+        name: lxcfs-proc-uptime
+---      
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lxc0001-conf
+  namespace: z160000001557
+  labels:
+    name: lxc0001-conf
+data:
+  cluster.conf: |
+    master:172.20.1.239
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lxc0001-svc
+  namespace: z160000001557
+spec:
+  ports:
+  - name: vnc
+    nodePort: 45019
+    port: 3389
+    protocol: TCP
+    targetPort: 3389
+  - name: ssh
+    nodePort: 46019
+    port: 22
+    protocol: TCP
+    targetPort: 22
+  selector:
+    vncserver: lxc0001
+  sessionAffinity: None
+  type: NodePort

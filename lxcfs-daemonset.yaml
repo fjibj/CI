@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "3"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"DaemonSet","metadata":{"annotations":{},"labels":{"app":"lxcfs"},"name":"lxcfs","namespace":"default"},"spec":{"selector":{"matchLabels":{"app":"lxcfs"}},"template":{"metadata":{"labels":{"app":"lxcfs"}},"spec":{"containers":[{"image":"172.32.150.15/paas_public/lxcfs:4.0.121","imagePullPolicy":"Always","name":"lxcfs","securityContext":{"privileged":true},"volumeMounts":[{"mountPath":"/sys/fs/cgroup","name":"cgroup"},{"mountPath":"/var/lib/lxcfs","mountPropagation":"Bidirectional","name":"lxcfs"},{"mountPath":"/usr/local","name":"usr-local"},{"mountPath":"/usr/lib64","name":"usr-lib64"}]}],"hostPID":true,"tolerations":[{"effect":"NoSchedule","key":"node-role.kubernetes.io/master"}],"volumes":[{"hostPath":{"path":"/sys/fs/cgroup"},"name":"cgroup"},{"hostPath":{"path":"/usr/local"},"name":"usr-local"},{"hostPath":{"path":"/usr/lib64"},"name":"usr-lib64"},{"hostPath":{"path":"/var/lib/lxcfs","type":"DirectoryOrCreate"},"name":"lxcfs"}]}}}}
+  creationTimestamp: "2022-07-05T02:43:06Z"
+  generation: 3
+  labels:
+    app: lxcfs
+  name: lxcfs
+  namespace: default
+  resourceVersion: "33173121"
+  selfLink: /apis/apps/v1/namespaces/default/daemonsets/lxcfs
+  uid: d8360ade-07d7-4826-a359-a79dde72dfe6
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: lxcfs
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: lxcfs
+    spec:
+      containers:
+      - image: 172.32.150.15/paas_public/lxcfs:4.0.121.20220707
+        imagePullPolicy: Always
+        name: lxcfs
+        resources: {}
+        securityContext:
+          privileged: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /sys/fs/cgroup
+          name: cgroup
+        - mountPath: /var/lib/lxc/lxcfs
+          mountPropagation: Bidirectional
+          name: lxcfs
+        - mountPath: /usr/local
+          name: usr-local
+        - mountPath: /usr/lib64
+          name: usr-lib64
+      dnsPolicy: ClusterFirst
+      hostPID: true
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      volumes:
+      - hostPath:
+          path: /sys/fs/cgroup
+          type: ""
+        name: cgroup
+      - hostPath:
+          path: /usr/local
+          type: ""
+        name: usr-local
+      - hostPath:
+          path: /usr/lib64
+          type: ""
+        name: usr-lib64
+      - hostPath:
+          path: /var/lib/lxc/lxcfs
+          type: DirectoryOrCreate
+        name: lxcfs
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
+status:
+  currentNumberScheduled: 6
+  desiredNumberScheduled: 6
+  numberAvailable: 6
+  numberMisscheduled: 0
+  numberReady: 6
+  observedGeneration: 3
+  updatedNumberScheduled: 6
