@@ -147,3 +147,19 @@ aca59d01361d
               total        used        free      shared  buff/cache   available
 Mem:        5242880       12440     5222256           0        8184     5230440
 Swap:             0           0           0
+
+
+以下是在k8s上的应用：
+
+1. 更新lxcfs镜像，主要是start.sh，将其中的/var/lib/lxcfs都替换成/var/lib/lxc/lxcfs （参考start.sh)
+
+2. 修改lxcfs-daemonset.yaml，使用更新的lxc镜像，也将挂载部分的/var/lib/lxcfs都替换成/var/lib/lxc/lxcfs （参考lxcfs-daemonset.yaml）
+
+3. 调整应用中Mount部分的配置（参考lesson_test.yaml）
+
+4. 执行container_remount_lxcfs.sh重新挂载lxcfs （参考container_remount_lxcfs.sh）
+
+5. 可以考虑将lxcfs做成本地服务，利用ExecStartPost执行重新挂载（参考lxcfs.service）
+
+6. 可能修改start.sh直接重新挂载更好，待验证
+
