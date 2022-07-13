@@ -166,11 +166,14 @@ Swap:             0           0           0
 
 # 完成lxcfs服务制作
 
-'tar xvzf lxcfs-srv-inst.tar.gz
+tar xvzf lxcfs-srv-inst.tar.gz
+
 cd inst/
-./lxcfs-install.sh'
+
+./lxcfs-install.sh
 
 检查lxcfs服务状态
-'systemctl status lxcfs'
+
+systemctl status lxcfs
 
 
