@@ -305,7 +305,7 @@ ddd
 #继续实验上次失败的场景
 # docker run -dt -v=/sys/fs/cgroup:/sys/fs/cgroup:ro  --name ddd -p 44000:3389 -p 44002:22 --hostname master  xxxxxx/yyyyy:1.0.20220531
 84135250bcc7dc112837cdc29651fefb6ab58b19cb22329a95e9398e2b8512fc
-[root@vcapp133 overlay2]# docker ps
+# docker ps
 CONTAINER ID   IMAGE                                                    COMMAND                  CREATED          STATUS          PORTS                                            NAMES
 84135250bcc7   xxxxxx/yyyyy:1.0.20220531   "/bin/bash /tools/en…"   43 seconds ago   Up 42 seconds   0.0.0.0:44002->22/tcp, 0.0.0.0:44000->3389/tcp   ddd
 # docker inspect 84135250bcc7 |jq .[0].GraphDriver.Data
@@ -431,7 +431,29 @@ root       102    82  0 17:54 pts/1    00:00:00 ps -ef
 #当删除所有用到该更新过的子目录的镜像时，该子目录也会被删除，因此删除镜像操作要注意！
 
 
+例子：
+开发机：
+# ./getbasediff.sh base-XXXXX 20220621 base-XXXXX 20220726
+# ll
+total 4
+drwxr-xr-x 3 root root   66 Aug  2 16:38 BASE-20220621
+drwxr-xr-x 3 root root   66 Aug  3 08:55 BASE-20220726
+-rwxr-xr-x 1 root root 1462 Aug  3 08:48 getbasediff.sh
+# ll BASE-20220726/
+total 809188
+-rw-r--r--  1 root root 828605076 Aug  3 08:56 BASE-20220726-diff.tar.gz
+drwxr-xr-x 17 root root       224 Aug  3 08:55 diff
+-rw-r--r--  1 root root         0 Aug  3 08:55 log.log
 
+生产机：
+# scp root@xx.xx.xx.xx:/var/lib/docker/overlay2/tmp/BASE-20220726/BASE-20220726-diff.tar.gz ./
+root@xx.xx.xx.xx's password: 
+microk8s is not running, try microk8s start
+BASE-20220726-diff.tar.gz                                                        100%  790MB  72.6MB/s   00:10   
+# ./updatebase.sh 20220621 20220726
+# cat baseimg.properties 
+base.dir=/var/lib/docker/overlay2/2cb780e1dbb2fbf0dd6fe6098cbad94598c20f3062dcc5142ff5a1158f787847/diff
+base.ver=20220726
 
 
 
